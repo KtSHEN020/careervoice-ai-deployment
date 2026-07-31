@@ -1,0 +1,200 @@
+[
+  {
+    "job_id": "job_001",
+    "title": "Junior Backend Developer",
+    "company": "Example Tech",
+    "location": "Adelaide",
+    "work_type": "remote",
+    "seniority": "junior",
+    "description": "Build and maintain backend services for internal and customer-facing applications.",
+    "required_skills": [
+      "Python",
+      "SQL",
+      "Git"
+    ],
+    "preferred_skills": [
+      "Docker",
+      "AWS"
+    ],
+    "responsibilities": [
+      "Develop backend features",
+      "Work with relational databases",
+      "Use Git for version control",
+      "Collaborate with the software engineering team"
+    ],
+    "tags": [
+      "backend development",
+      "software engineering"
+    ]
+  },
+  {
+    "job_id": "job_002",
+    "title": "Junior Data Analyst",
+    "company": "Example Analytics",
+    "location": "Adelaide",
+    "work_type": "hybrid",
+    "seniority": "junior",
+    "description": "Analyse business data, prepare reports, and support data-driven decision making.",
+    "required_skills": [
+      "SQL",
+      "Python",
+      "Excel"
+    ],
+    "preferred_skills": [
+      "Power BI",
+      "Tableau"
+    ],
+    "responsibilities": [
+      "Clean and analyse datasets",
+      "Write SQL queries",
+      "Create reports and dashboards",
+      "Communicate insights to stakeholders"
+    ],
+    "tags": [
+      "data-related roles",
+      "analytics"
+    ]
+  },
+  {
+    "job_id": "job_003",
+    "title": "Technical Sales Consultant",
+    "company": "Example Sales Group",
+    "location": "Remote",
+    "work_type": "remote",
+    "seniority": "junior",
+    "description": "Support sales conversations by explaining technical products to potential customers.",
+    "required_skills": [
+      "Communication",
+      "CRM",
+      "Python"
+    ],
+    "preferred_skills": [
+      "Salesforce"
+    ],
+    "responsibilities": [
+      "Join customer sales calls",
+      "Prepare product demonstrations",
+      "Support the sales team",
+      "Maintain customer relationship records"
+    ],
+    "tags": [
+      "sales",
+      "customer service"
+    ]
+  },
+  {
+    "job_id": "job_004",
+    "title": "Senior Backend Engineer",
+    "company": "Example Cloud Systems",
+    "location": "Remote",
+    "work_type": "remote",
+    "seniority": "senior",
+    "description": "Lead backend development for cloud-native systems and mentor junior developers.",
+    "required_skills": [
+      "Python",
+      "SQL",
+      "Git",
+      "Docker",
+      "AWS"
+    ],
+    "preferred_skills": [
+      "Kubernetes",
+      "System design"
+    ],
+    "responsibilities": [
+      "Design backend architecture",
+      "Review code from other engineers",
+      "Lead technical planning",
+      "Mentor junior developers"
+    ],
+    "tags": [
+      "backend development",
+      "software engineering",
+      "senior roles"
+    ]
+  },
+  {
+    "job_id": "job_005",
+    "title": "Customer Support Analyst",
+    "company": "Example Support Co",
+    "location": "Adelaide",
+    "work_type": "remote",
+    "seniority": "junior",
+    "description": "Help customers resolve product issues and document common support problems.",
+    "required_skills": [
+      "SQL",
+      "Communication",
+      "Troubleshooting"
+    ],
+    "preferred_skills": [
+      "Zendesk"
+    ],
+    "responsibilities": [
+      "Respond to customer support tickets",
+      "Investigate basic technical issues",
+      "Escalate product bugs",
+      "Write support documentation"
+    ],
+    "tags": [
+      "customer service",
+      "support"
+    ]
+  },
+  {
+    "job_id": "job_006",
+    "title": "Junior Frontend Developer",
+    "company": "Example Web Studio",
+    "location": "Melbourne",
+    "work_type": "onsite",
+    "seniority": "junior",
+    "description": "Build user interfaces for web applications using modern frontend tools.",
+    "required_skills": [
+      "React",
+      "Git",
+      "JavaScript"
+    ],
+    "preferred_skills": [
+      "TypeScript",
+      "CSS"
+    ],
+    "responsibilities": [
+      "Build reusable frontend components",
+      "Fix UI bugs",
+      "Work with designers",
+      "Use Git in a team workflow"
+    ],
+    "tags": [
+      "frontend development",
+      "software engineering"
+    ]
+  },
+  {
+    "job_id": "job_007",
+    "title": "AI Tools Intern",
+    "company": "Example AI Lab",
+    "location": "Remote",
+    "work_type": "remote",
+    "seniority": "intern",
+    "description": "Assist with building simple AI-powered tools and internal automation workflows.",
+    "required_skills": [
+      "Python",
+      "Git"
+    ],
+    "preferred_skills": [
+      "machine learning",
+      "APIs",
+      "SQL"
+    ],
+    "responsibilities": [
+      "Prototype small AI tools",
+      "Test automation scripts",
+      "Document technical workflows",
+      "Support software engineering experiments"
+    ],
+    "tags": [
+      "AI tools",
+      "software engineering",
+      "data-related roles"
+    ]
+  }
+]

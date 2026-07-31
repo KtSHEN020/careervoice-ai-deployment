@@ -1,0 +1,42 @@
+{
+  "target_roles": [
+    "junior software developer",
+    "backend developer",
+    "data analyst"
+  ],
+  "skills": [
+    "Python",
+    "SQL",
+    "Git",
+    "React",
+    "machine learning"
+  ],
+  "experience_level": "junior",
+  "preferred_locations": [
+    "Adelaide",
+    "remote"
+  ],
+  "preferred_work_types": [
+    "remote"
+  ],
+  "liked_areas": [
+    "backend development",
+    "data-related roles",
+    "AI tools",
+    "software engineering"
+  ],
+  "disliked_areas": [
+    "sales",
+    "customer service",
+    "senior roles"
+  ],
+  "hard_constraints": [
+    "avoid sales roles",
+    "avoid customer service roles",
+    "avoid senior roles"
+  ],
+  "career_goals": [
+    "move toward AI or software engineering"
+  ],
+  "notes": []
+}
