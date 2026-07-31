@@ -1,0 +1,41 @@
+[project]
+name = "voice-career-profile-extractor"
+version = "0.1.0"
+description = "Extract structured career profile information from voice transcripts or text input."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "openai>=2.41.0",
+    "pydantic>=2.13.4",
+    "python-dotenv>=1.2.2",
+]
+
+[project.scripts]
+career-profile-extract = "voice_career_profile_extractor.cli:main"
+
+[project.optional-dependencies]
+voice = [
+    "sounddevice>=0.5.5",
+]
+
+[dependency-groups]
+dev = [
+    "black>=26.3.1",
+    "pytest>=9.0.3",
+    "ruff>=0.15.12",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]

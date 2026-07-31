@@ -42,4 +42,4 @@ Never commit:
 
 ## Current status
 
-Step 15B: initial deployment repository skeleton.
+Step 15C: career-profile extractor deployment snapshot imported.
