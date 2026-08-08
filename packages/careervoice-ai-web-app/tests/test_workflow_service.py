@@ -8,6 +8,15 @@ import fitz
 import pytest
 from careervoice_ai_orchestrator.models import WorkflowConfig
 
+from careervoice_ai_web_app.ai_usage import (
+    AI_RANKING_AI_UNITS,
+    AI_USAGE_UNITS_KEY,
+    DOCUMENT_RECOGNITION_AI_UNITS,
+    PROFILE_EXTRACTION_AI_UNITS,
+    VOICE_TRANSCRIPTION_AI_UNITS,
+    AIUsageLimitError,
+    SessionAIUsageBudget,
+)
 from careervoice_ai_web_app.document_recognition import RecognizedDocument
 from careervoice_ai_web_app.scanned_document import RenderedDocumentPage
 from careervoice_ai_web_app.session_workspace import SessionWorkspace
@@ -940,3 +949,190 @@ def test_transcribe_voice_requires_transcriber() -> None:
             content=b"fake-wav-content",
             media_type="audio/wav",
         )
+
+
+def test_llm_profile_extraction_reserves_ai_usage(
+    tmp_path: Path,
+) -> None:
+    state: dict[str, object] = {}
+    gateway = FakeOrchestratorGateway()
+
+    service = CareerVoiceWorkflowService(
+        gateway,
+        ai_usage_budget=SessionAIUsageBudget(
+            state
+        ),
+    )
+
+    workspace = SessionWorkspace.create(
+        root_dir=tmp_path,
+    )
+
+    service.extract_text_profile(
+        career_preference_text="I want a software role.",
+        extractor="llm",
+        workspace=workspace,
+    )
+
+    assert (
+        state[AI_USAGE_UNITS_KEY]
+        == PROFILE_EXTRACTION_AI_UNITS
+    )
+
+
+def test_rules_profile_extraction_does_not_use_ai_allowance(
+    tmp_path: Path,
+) -> None:
+    state: dict[str, object] = {}
+    gateway = FakeOrchestratorGateway()
+
+    service = CareerVoiceWorkflowService(
+        gateway,
+        ai_usage_budget=SessionAIUsageBudget(
+            state
+        ),
+    )
+
+    workspace = SessionWorkspace.create(
+        root_dir=tmp_path,
+    )
+
+    service.extract_text_profile(
+        career_preference_text="I want a software role.",
+        extractor="rules",
+        workspace=workspace,
+    )
+
+    assert state.get(
+        AI_USAGE_UNITS_KEY,
+        0,
+    ) == 0
+
+
+def test_voice_transcription_reserves_ai_usage() -> None:
+    state: dict[str, object] = {}
+
+    service = CareerVoiceWorkflowService(
+        FakeOrchestratorGateway(),
+        voice_transcriber=FakeVoiceTranscriber(),
+        ai_usage_budget=SessionAIUsageBudget(
+            state
+        ),
+    )
+
+    service.transcribe_voice(
+        filename="career-voice.wav",
+        content=b"fake-wav-content",
+        media_type="audio/wav",
+    )
+
+    assert (
+        state[AI_USAGE_UNITS_KEY]
+        == VOICE_TRANSCRIPTION_AI_UNITS
+    )
+
+
+def test_scanned_document_recognition_reserves_ai_usage(
+    tmp_path: Path,
+) -> None:
+    state: dict[str, object] = {}
+    gateway = FakeOrchestratorGateway()
+
+    service = CareerVoiceWorkflowService(
+        gateway,
+        document_recognizer=FakeDocumentRecognizer(),
+        ai_usage_budget=SessionAIUsageBudget(
+            state
+        ),
+    )
+
+    workspace = SessionWorkspace.create(
+        root_dir=tmp_path,
+    )
+
+    service.extract_document_profile(
+        filename="scanned-resume.pdf",
+        content=_create_image_only_pdf(),
+        additional_preferences="",
+        extractor="rules",
+        workspace=workspace,
+        allow_image_recognition=True,
+    )
+
+    assert (
+        state[AI_USAGE_UNITS_KEY]
+        == DOCUMENT_RECOGNITION_AI_UNITS
+    )
+
+
+def test_llm_ranking_reserves_ai_usage(
+    tmp_path: Path,
+) -> None:
+    state: dict[str, object] = {}
+    gateway = FakeOrchestratorGateway()
+
+    service = CareerVoiceWorkflowService(
+        gateway,
+        ai_usage_budget=SessionAIUsageBudget(
+            state
+        ),
+    )
+
+    workspace = SessionWorkspace.create(
+        root_dir=tmp_path,
+    )
+
+    workspace.profile_path.write_text(
+        "{}",
+        encoding="utf-8",
+    )
+    workspace.jobs_output_path.write_text(
+        "[]",
+        encoding="utf-8",
+    )
+
+    service.rank_jobs(
+        scorer="llm",
+        max_results=5,
+        exclude_rejected=False,
+        workspace=workspace,
+    )
+
+    assert (
+        state[AI_USAGE_UNITS_KEY]
+        == AI_RANKING_AI_UNITS
+    )
+
+
+def test_ai_usage_limit_blocks_ai_operation_before_gateway(
+    tmp_path: Path,
+) -> None:
+    state: dict[str, object] = {
+        AI_USAGE_UNITS_KEY: 20,
+    }
+
+    gateway = FakeOrchestratorGateway()
+
+    service = CareerVoiceWorkflowService(
+        gateway,
+        ai_usage_budget=SessionAIUsageBudget(
+            state
+        ),
+    )
+
+    workspace = SessionWorkspace.create(
+        root_dir=tmp_path,
+    )
+
+    with pytest.raises(
+        AIUsageLimitError,
+        match="AI-assisted profile creation",
+    ):
+        service.extract_text_profile(
+            career_preference_text="I want a software role.",
+            extractor="llm",
+            workspace=workspace,
+        )
+
+    assert gateway.extract_profile_calls == []
+    assert state[AI_USAGE_UNITS_KEY] == 20

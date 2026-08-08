@@ -6,6 +6,9 @@ from collections.abc import Mapping, Sequence
 
 import streamlit as st
 
+from careervoice_ai_web_app.ai_usage import (
+    SessionAIUsageBudget,
+)
 from careervoice_ai_web_app.errors import OrchestrationError
 from careervoice_ai_web_app.orchestrator_gateway import (
     Repo4OrchestratorGateway,
@@ -1230,6 +1233,9 @@ def main() -> None:
     service = CareerVoiceWorkflowService(
         Repo4OrchestratorGateway(),
         voice_transcriber=Repo1VoiceTranscriber(),
+        ai_usage_budget=SessionAIUsageBudget(
+            st.session_state
+        ),
     )
 
     missing_commands = (

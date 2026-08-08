@@ -6,6 +6,13 @@ from typing import Protocol
 
 from careervoice_ai_orchestrator.models import WorkflowConfig
 
+from careervoice_ai_web_app.ai_usage import (
+    AI_RANKING_AI_UNITS,
+    DOCUMENT_RECOGNITION_AI_UNITS,
+    PROFILE_EXTRACTION_AI_UNITS,
+    VOICE_TRANSCRIPTION_AI_UNITS,
+    SessionAIUsageBudget,
+)
 from careervoice_ai_web_app.document_input import (
     NoReadablePdfTextError,
     extract_document_text,
@@ -97,10 +104,27 @@ class CareerVoiceWorkflowService:
         *,
         document_recognizer: SupportsDocumentRecognizer | None = None,
         voice_transcriber: SupportsVoiceTranscriber | None = None,
+        ai_usage_budget: SessionAIUsageBudget | None = None,
     ) -> None:
         self.gateway = gateway
         self._document_recognizer = document_recognizer
         self._voice_transcriber = voice_transcriber
+        self._ai_usage_budget = ai_usage_budget
+
+    def _reserve_ai_usage(
+        self,
+        units: int,
+        *,
+        feature: str,
+    ) -> None:
+        """Reserve session allowance when AI usage controls are enabled."""
+        if self._ai_usage_budget is None:
+            return
+
+        self._ai_usage_budget.reserve(
+            units,
+            feature=feature,
+        )
 
     def extract_text_profile(
         self,
@@ -119,6 +143,12 @@ class CareerVoiceWorkflowService:
         if normalized_extractor not in SUPPORTED_PROFILE_EXTRACTORS:
             raise ValueError(
                 "Unsupported profile extractor. Choose 'rules' or 'llm'."
+            )
+
+        if normalized_extractor == "llm":
+            self._reserve_ai_usage(
+                PROFILE_EXTRACTION_AI_UNITS,
+                feature="AI-assisted profile creation",
             )
 
         workspace.ensure_exists()
@@ -161,6 +191,11 @@ class CareerVoiceWorkflowService:
             raise ValueError(
                 "Voice transcription is not currently available."
             )
+
+        self._reserve_ai_usage(
+            VOICE_TRANSCRIPTION_AI_UNITS,
+            feature="voice transcription",
+        )
 
         transcript = transcriber.transcribe(
             recording
@@ -274,6 +309,11 @@ class CareerVoiceWorkflowService:
                     "available."
                 ) from error
 
+        self._reserve_ai_usage(
+            DOCUMENT_RECOGNITION_AI_UNITS,
+            feature="scanned-document recognition",
+        )
+
         recognized_document = recognizer.recognize(
             pages
         )
@@ -378,6 +418,12 @@ class CareerVoiceWorkflowService:
         if not workspace.jobs_output_path.is_file():
             raise ValueError(
                 "Search for jobs before generating recommendations."
+            )
+
+        if settings.scorer == "llm":
+            self._reserve_ai_usage(
+                AI_RANKING_AI_UNITS,
+                feature="AI-assisted job ranking",
             )
 
         config = self._build_config(
