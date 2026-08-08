@@ -4,6 +4,7 @@ import pytest
 
 from voice_career_profile_extractor.llm_extractor import (
     DEFAULT_LLM_MODEL,
+    MAX_LLM_OUTPUT_TOKENS,
     LLMCareerProfile,
     extract_career_profile_with_llm,
 )
@@ -74,6 +75,10 @@ def test_extract_career_profile_with_llm_sends_expected_request():
 
     assert received_arguments["model"] == DEFAULT_LLM_MODEL
     assert received_arguments["text_format"] is LLMCareerProfile
+    assert (
+        received_arguments["max_output_tokens"]
+        == MAX_LLM_OUTPUT_TOKENS
+    )
     assert received_arguments["input"][0]["role"] == "developer"
     assert received_arguments["input"][1] == {
         "role": "user",

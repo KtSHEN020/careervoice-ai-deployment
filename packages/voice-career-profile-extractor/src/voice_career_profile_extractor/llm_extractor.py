@@ -5,7 +5,9 @@ from pydantic import BaseModel, ConfigDict
 from voice_career_profile_extractor.config import create_openai_client
 from voice_career_profile_extractor.models import CareerProfile
 
+
 DEFAULT_LLM_MODEL = "gpt-5.4-mini"
+MAX_LLM_OUTPUT_TOKENS = 2000
 
 EXTRACTION_INSTRUCTIONS = """
 Extract a structured career profile from the user's text.
@@ -51,6 +53,7 @@ class ResponsesAPI(Protocol):
         model: str,
         input: list[dict[str, str]],
         text_format: type[LLMCareerProfile],
+        max_output_tokens: int,
     ) -> Any:
         """Request and parse a structured response."""
 
@@ -92,11 +95,14 @@ def extract_career_profile_with_llm(
             },
         ],
         text_format=LLMCareerProfile,
+        max_output_tokens=MAX_LLM_OUTPUT_TOKENS,
     )
 
     parsed_profile = response.output_parsed
 
     if parsed_profile is None:
-        raise RuntimeError("LLM response did not include a parsed career profile.")
+        raise RuntimeError(
+            "LLM response did not include a parsed career profile."
+        )
 
     return CareerProfile(**parsed_profile.model_dump())

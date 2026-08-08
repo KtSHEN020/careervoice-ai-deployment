@@ -4,7 +4,7 @@ This document records the exact original repository commits used to create the d
 
 | Component | Original repository | Imported commit | Status |
 |---|---|---|---|
-| Career profile extraction | voice-career-profile-extractor | `2e64718` | Imported |
+| Career profile extraction | voice-career-profile-extractor | `322402d` | Imported |
 | Job recommendation | preference-aware-job-recommender | `c04006f` | Imported |
 | Job collection | job-listing-collector | `176f213` | Imported |
 | Workflow coordination | careervoice-ai-orchestrator | `06211a6` | Imported |
