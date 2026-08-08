@@ -42,4 +42,4 @@ Never commit:
 
 ## Current status
 
-Step 15C: career-profile extractor, job-recommender, job-collector, and workflow-coordinator deployment snapshots imported.
+Step 15C: all five CareerVoice AI deployment package snapshots imported.
