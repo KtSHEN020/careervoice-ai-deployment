@@ -6,6 +6,7 @@ import pytest
 
 from careervoice_ai_web_app.document_recognition import (
     DEFAULT_DOCUMENT_RECOGNITION_MODEL,
+    MAX_DOCUMENT_RECOGNITION_OUTPUT_TOKENS,
     OpenAIDocumentRecognizer,
 )
 from careervoice_ai_web_app.scanned_document import RenderedDocumentPage
@@ -113,6 +114,11 @@ def test_recognizer_sends_each_page_as_image_input() -> None:
     assert (
         call["model"]
         == DEFAULT_DOCUMENT_RECOGNITION_MODEL
+    )
+
+    assert (
+        call["max_output_tokens"]
+        == MAX_DOCUMENT_RECOGNITION_OUTPUT_TOKENS
     )
 
     input_value = call["input"]

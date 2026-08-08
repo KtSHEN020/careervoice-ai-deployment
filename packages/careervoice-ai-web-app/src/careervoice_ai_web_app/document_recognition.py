@@ -11,6 +11,7 @@ from openai import OpenAI
 from careervoice_ai_web_app.scanned_document import RenderedDocumentPage
 
 DEFAULT_DOCUMENT_RECOGNITION_MODEL = "gpt-5.6-luna"
+MAX_DOCUMENT_RECOGNITION_OUTPUT_TOKENS = 8000
 
 
 @dataclass(frozen=True)
@@ -82,6 +83,7 @@ class OpenAIDocumentRecognizer:
                         "content": content,
                     }
                 ],
+                max_output_tokens=MAX_DOCUMENT_RECOGNITION_OUTPUT_TOKENS,
             )
         except Exception as error:
             raise ValueError(
