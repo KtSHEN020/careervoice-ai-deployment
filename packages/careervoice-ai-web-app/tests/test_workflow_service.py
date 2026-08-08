@@ -18,6 +18,15 @@ from careervoice_ai_web_app.ai_usage import (
     SessionAIUsageBudget,
 )
 from careervoice_ai_web_app.document_recognition import RecognizedDocument
+from careervoice_ai_web_app.public_limits import (
+    MAX_ADDITIONAL_PREFERENCES_CHARACTERS,
+    MAX_CAREER_TEXT_CHARACTERS,
+    MAX_JOB_QUERIES,
+    MAX_JOB_RESULTS_PER_QUERY,
+    MAX_RECOMMENDATIONS,
+    MAX_TRANSCRIPT_CHARACTERS,
+    PublicRequestLimitError,
+)
 from careervoice_ai_web_app.scanned_document import RenderedDocumentPage
 from careervoice_ai_web_app.session_workspace import SessionWorkspace
 from careervoice_ai_web_app.voice_input import (
@@ -1136,3 +1145,202 @@ def test_ai_usage_limit_blocks_ai_operation_before_gateway(
 
     assert gateway.extract_profile_calls == []
     assert state[AI_USAGE_UNITS_KEY] == 20
+
+
+def test_oversized_career_text_is_rejected_before_ai_usage(
+    tmp_path: Path,
+) -> None:
+    state: dict[str, object] = {}
+
+    service = CareerVoiceWorkflowService(
+        FakeOrchestratorGateway(),
+        ai_usage_budget=SessionAIUsageBudget(
+            state
+        ),
+    )
+
+    workspace = SessionWorkspace.create(
+        root_dir=tmp_path,
+    )
+
+    with pytest.raises(
+        PublicRequestLimitError,
+        match="Career information is too long",
+    ):
+        service.extract_text_profile(
+            career_preference_text=(
+                "a" * (MAX_CAREER_TEXT_CHARACTERS + 1)
+            ),
+            extractor="llm",
+            workspace=workspace,
+        )
+
+    assert state.get(
+        AI_USAGE_UNITS_KEY,
+        0,
+    ) == 0
+
+
+def test_oversized_additional_preferences_are_rejected(
+    tmp_path: Path,
+) -> None:
+    service = CareerVoiceWorkflowService(
+        FakeOrchestratorGateway(),
+    )
+
+    workspace = SessionWorkspace.create(
+        root_dir=tmp_path,
+    )
+
+    with pytest.raises(
+        PublicRequestLimitError,
+        match="Additional preferences is too long",
+    ):
+        service.extract_document_profile(
+            filename="resume.txt",
+            content=b"Python developer",
+            additional_preferences=(
+                "a"
+                * (
+                    MAX_ADDITIONAL_PREFERENCES_CHARACTERS
+                    + 1
+                )
+            ),
+            extractor="rules",
+            workspace=workspace,
+            allow_image_recognition=False,
+        )
+
+
+def test_search_jobs_rejects_too_many_queries(
+    tmp_path: Path,
+) -> None:
+    service = CareerVoiceWorkflowService(
+        FakeOrchestratorGateway(),
+    )
+
+    workspace = SessionWorkspace.create(
+        root_dir=tmp_path,
+    )
+
+    roles = tuple(
+        f"role-{index}"
+        for index in range(MAX_JOB_QUERIES + 1)
+    )
+
+    with pytest.raises(
+        PublicRequestLimitError,
+        match="Too many job-search roles",
+    ):
+        service.search_jobs(
+            roles=roles,
+            location="Adelaide",
+            max_results_per_role=1,
+            source="adzuna",
+            workspace=workspace,
+        )
+
+
+def test_search_jobs_rejects_too_many_results_per_query(
+    tmp_path: Path,
+) -> None:
+    service = CareerVoiceWorkflowService(
+        FakeOrchestratorGateway(),
+    )
+
+    workspace = SessionWorkspace.create(
+        root_dir=tmp_path,
+    )
+
+    with pytest.raises(
+        PublicRequestLimitError,
+        match="Too many listings",
+    ):
+        service.search_jobs(
+            roles=("software developer",),
+            location="Adelaide",
+            max_results_per_role=(
+                MAX_JOB_RESULTS_PER_QUERY + 1
+            ),
+            source="adzuna",
+            workspace=workspace,
+        )
+
+
+def test_excessive_recommendation_count_is_rejected_before_ai_usage(
+    tmp_path: Path,
+) -> None:
+    state: dict[str, object] = {}
+
+    service = CareerVoiceWorkflowService(
+        FakeOrchestratorGateway(),
+        ai_usage_budget=SessionAIUsageBudget(
+            state
+        ),
+    )
+
+    workspace = SessionWorkspace.create(
+        root_dir=tmp_path,
+    )
+
+    workspace.profile_path.write_text(
+        "{}",
+        encoding="utf-8",
+    )
+    workspace.jobs_output_path.write_text(
+        "[]",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(
+        PublicRequestLimitError,
+        match="Too many recommendations",
+    ):
+        service.rank_jobs(
+            scorer="llm",
+            max_results=MAX_RECOMMENDATIONS + 1,
+            exclude_rejected=False,
+            workspace=workspace,
+        )
+
+    assert state.get(
+        AI_USAGE_UNITS_KEY,
+        0,
+    ) == 0
+
+
+def test_oversized_voice_transcript_is_rejected() -> None:
+    class LongTranscriptTranscriber:
+        def transcribe(
+            self,
+            recording: VoiceRecording,
+        ) -> VoiceTranscript:
+            return VoiceTranscript(
+                text=(
+                    "a"
+                    * (
+                        MAX_TRANSCRIPT_CHARACTERS
+                        + 1
+                    )
+                )
+            )
+
+    state: dict[str, object] = {}
+
+    service = CareerVoiceWorkflowService(
+        FakeOrchestratorGateway(),
+        voice_transcriber=LongTranscriptTranscriber(),
+        ai_usage_budget=SessionAIUsageBudget(
+            state
+        ),
+    )
+
+    with pytest.raises(
+        PublicRequestLimitError,
+        match="Transcript is too long",
+    ):
+        service.transcribe_voice(
+            filename="career-voice.wav",
+            content=b"fake-wav-content",
+            media_type="audio/wav",
+        )

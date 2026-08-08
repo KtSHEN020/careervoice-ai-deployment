@@ -4,6 +4,9 @@ from pathlib import Path
 
 from streamlit.testing.v1 import AppTest
 
+from careervoice_ai_web_app.public_limits import (
+    MAX_RECOMMENDATIONS,
+)
 from careervoice_ai_web_app.ui_state import (
     COLLECTED_JOBS_KEY,
     JOB_QUERIES_KEY,
@@ -256,4 +259,38 @@ def test_app_displays_ai_assisted_ranking_label() -> None:
         metric.label == "Ranking method"
         and metric.value == "AI-assisted"
         for metric in app.metric
+    )
+
+
+def test_recommendation_form_caps_public_maximum() -> None:
+    app = AppTest.from_file(
+        str(APP_PATH)
+    )
+
+    _seed_completed_job_search(app)
+
+    app.session_state[COLLECTED_JOBS_KEY] = [
+        {
+            "job_id": f"job-{index}",
+            "title": f"Developer {index}",
+        }
+        for index in range(
+            MAX_RECOMMENDATIONS + 2
+        )
+    ]
+
+    app.run(timeout=15)
+
+    assert len(app.exception) == 0
+
+    max_results_input = next(
+        number_input
+        for number_input in app.number_input
+        if number_input.label
+        == "Maximum recommendations"
+    )
+
+    assert (
+        max_results_input.max
+        == MAX_RECOMMENDATIONS
     )

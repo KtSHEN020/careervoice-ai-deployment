@@ -13,6 +13,13 @@ from careervoice_ai_web_app.errors import OrchestrationError
 from careervoice_ai_web_app.orchestrator_gateway import (
     Repo4OrchestratorGateway,
 )
+from careervoice_ai_web_app.public_limits import (
+    MAX_ADDITIONAL_PREFERENCES_CHARACTERS,
+    MAX_CAREER_TEXT_CHARACTERS,
+    MAX_JOB_QUERIES,
+    MAX_JOB_RESULTS_PER_QUERY,
+    MAX_TRANSCRIPT_CHARACTERS,
+)
 from careervoice_ai_web_app.recommendation_ui import (
     render_recommendation_workflow,
 )
@@ -299,10 +306,12 @@ def _render_voice_profile_input(
         edited_transcript = st.text_area(
             "Transcribed career information",
             height=220,
+            max_chars=MAX_TRANSCRIPT_CHARACTERS,
             key=VOICE_TRANSCRIPT_KEY,
             help=(
                 "Review names, technologies, locations, job titles, "
-                "and other details before continuing."
+                "and other details before continuing. "
+                f"Maximum {MAX_TRANSCRIPT_CHARACTERS:,} characters."
             ),
         )
 
@@ -427,6 +436,7 @@ def _render_profile_input(
             career_preference_text = st.text_area(
                 "Career information and preferences",
                 height=220,
+                max_chars=MAX_CAREER_TEXT_CHARACTERS,
                 placeholder=(
                     "Example: I am looking for a junior software developer "
                     "or backend developer role in Adelaide. I prefer hybrid "
@@ -436,7 +446,8 @@ def _render_profile_input(
 
             st.caption(
                 "You can describe your experience, skills, preferred roles, "
-                "locations, work arrangements, constraints, and career goals."
+                "locations, work arrangements, constraints, and career goals. "
+                f"Maximum {MAX_CAREER_TEXT_CHARACTERS:,} characters."
             )
 
         else:
@@ -479,6 +490,7 @@ def _render_profile_input(
             additional_preferences = st.text_area(
                 "Additional career preferences (optional)",
                 height=160,
+                max_chars=MAX_ADDITIONAL_PREFERENCES_CHARACTERS,
                 placeholder=(
                     "Example: I am looking for junior backend roles in "
                     "Adelaide. I prefer hybrid work and do not want "
@@ -489,7 +501,8 @@ def _render_profile_input(
             st.caption(
                 "A CV often describes your experience but not what you want "
                 "next. Add any preferred roles, locations, work arrangements, "
-                "constraints, or career goals that may be missing."
+                "constraints, or career goals that may be missing. "
+                f"Maximum {MAX_ADDITIONAL_PREFERENCES_CHARACTERS:,} characters."
             )
 
         extractor = st.selectbox(
@@ -1056,15 +1069,21 @@ def _render_job_search(
     )
 
     if isinstance(default_roles, list):
-        default_roles_text = "\n".join(
+        default_role_values = [
             role
             for role in default_roles
             if isinstance(role, str)
-        )
+        ]
     else:
-        default_roles_text = "\n".join(
-            confirmed_roles
-        )
+        default_role_values = [
+            role
+            for role in confirmed_roles
+            if isinstance(role, str)
+        ]
+
+    default_roles_text = "\n".join(
+        default_role_values[:MAX_JOB_QUERIES]
+    )
 
     default_location = _saved_search_setting(
         "location",
@@ -1084,22 +1103,35 @@ def _render_job_search(
         5,
     )
 
-    if not isinstance(
-        default_max_results,
-        int,
+    if (
+        not isinstance(default_max_results, int)
+        or isinstance(default_max_results, bool)
+        or not 1
+        <= default_max_results
+        <= MAX_JOB_RESULTS_PER_QUERY
     ):
-        default_max_results = 5
+        default_max_results = min(
+            5,
+            MAX_JOB_RESULTS_PER_QUERY,
+        )
 
     with st.form("job_search_form"):
         roles_text = st.text_area(
             "Roles to search for",
             value=default_roles_text,
             height="content",
-            help="Enter one role per line.",
+            help=(
+                f"Enter up to {MAX_JOB_QUERIES} roles, "
+                "one role per line."
+            ),
             key=job_search_widget_key(
                 st.session_state,
                 "roles",
             ),
+        )
+
+        st.caption(
+            f"You can search up to {MAX_JOB_QUERIES} roles at a time."
         )
 
         location_column, limit_column, source_column = st.columns(
@@ -1122,12 +1154,13 @@ def _render_job_search(
             max_results_per_role = st.number_input(
                 "Maximum listings per role",
                 min_value=1,
-                max_value=50,
+                max_value=MAX_JOB_RESULTS_PER_QUERY,
                 value=default_max_results,
                 step=1,
                 help=(
                     "This limit applies separately to each role before "
-                    "duplicate listings are removed."
+                    "duplicate listings are removed. "
+                    f"Maximum {MAX_JOB_RESULTS_PER_QUERY} listings per role."
                 ),
                 key=job_search_widget_key(
                     st.session_state,

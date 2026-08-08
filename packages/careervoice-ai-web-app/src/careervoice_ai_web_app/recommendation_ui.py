@@ -5,6 +5,9 @@ from collections.abc import Callable, Mapping
 
 import streamlit as st
 
+from careervoice_ai_web_app.public_limits import (
+    MAX_RECOMMENDATIONS,
+)
 from careervoice_ai_web_app.session_workspace import SessionWorkspace
 from careervoice_ai_web_app.ui_state import (
     COLLECTED_JOBS_KEY,
@@ -351,7 +354,7 @@ def render_recommendation_workflow(
     )
 
     maximum_available = min(
-        50,
+        MAX_RECOMMENDATIONS,
         len(jobs_value),
     )
 
@@ -440,6 +443,10 @@ def render_recommendation_workflow(
                 max_value=maximum_available,
                 value=default_max_results,
                 step=1,
+                help=(
+                    f"Show up to {MAX_RECOMMENDATIONS} "
+                    "ranked recommendations."
+                ),
                 key=recommendation_widget_key(
                     st.session_state,
                     "max_results",

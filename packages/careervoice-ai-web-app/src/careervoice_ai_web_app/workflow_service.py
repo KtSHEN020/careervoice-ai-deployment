@@ -28,6 +28,14 @@ from careervoice_ai_web_app.models import (
 from careervoice_ai_web_app.orchestrator_gateway import (
     SupportsOrchestratorGateway,
 )
+from careervoice_ai_web_app.public_limits import (
+    MAX_ADDITIONAL_PREFERENCES_CHARACTERS,
+    MAX_CAREER_TEXT_CHARACTERS,
+    MAX_TRANSCRIPT_CHARACTERS,
+    validate_job_search_limits,
+    validate_recommendation_limit,
+    validate_text_length,
+)
 from careervoice_ai_web_app.recommendation_models import (
     RecommendationDocument,
     RecommendationSettings,
@@ -134,6 +142,12 @@ class CareerVoiceWorkflowService:
         workspace: SessionWorkspace,
     ) -> ProfileExtractionResult:
         """Extract a profile from text into one isolated session workspace."""
+        validate_text_length(
+            career_preference_text,
+            field_name="Career information",
+            max_characters=MAX_CAREER_TEXT_CHARACTERS,
+        )
+
         cleaned_text = career_preference_text.strip()
         normalized_extractor = extractor.strip().lower()
 
@@ -201,6 +215,12 @@ class CareerVoiceWorkflowService:
             recording
         )
 
+        validate_text_length(
+            transcript.text,
+            field_name="Transcript",
+            max_characters=MAX_TRANSCRIPT_CHARACTERS,
+        )
+
         transcript_text = transcript.text.strip()
 
         if not transcript_text:
@@ -245,6 +265,12 @@ class CareerVoiceWorkflowService:
         allow_image_recognition: bool = False,
     ) -> ProfileExtractionResult:
         """Extract a career profile from an uploaded career document."""
+        validate_text_length(
+            additional_preferences,
+            field_name="Additional preferences",
+            max_characters=MAX_ADDITIONAL_PREFERENCES_CHARACTERS,
+        )
+
         try:
             document = extract_document_text(
                 filename=filename,
@@ -369,6 +395,11 @@ class CareerVoiceWorkflowService:
             source=source,
         )
 
+        validate_job_search_limits(
+            settings.roles,
+            max_results=settings.max_results_per_role,
+        )
+
         if not workspace.profile_path.is_file():
             raise ValueError(
                 "Confirm your career profile before searching for jobs."
@@ -408,6 +439,10 @@ class CareerVoiceWorkflowService:
             scorer=scorer,
             max_results=max_results,
             exclude_rejected=exclude_rejected,
+        )
+
+        validate_recommendation_limit(
+            settings.max_results
         )
 
         if not workspace.profile_path.is_file():

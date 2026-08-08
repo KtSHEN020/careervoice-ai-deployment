@@ -5,6 +5,13 @@ from unittest.mock import patch
 
 from streamlit.testing.v1 import AppTest
 
+from careervoice_ai_web_app.public_limits import (
+    MAX_ADDITIONAL_PREFERENCES_CHARACTERS,
+    MAX_CAREER_TEXT_CHARACTERS,
+    MAX_JOB_QUERIES,
+    MAX_JOB_RESULTS_PER_QUERY,
+    MAX_TRANSCRIPT_CHARACTERS,
+)
 from careervoice_ai_web_app.ui_state import (
     COLLECTED_JOBS_KEY,
     JOB_QUERIES_KEY,
@@ -37,6 +44,11 @@ def test_app_renders_profile_input_form() -> None:
 
     assert app.text_area[0].label == (
         "Career information and preferences"
+    )
+
+    assert (
+        app.text_area[0].max_chars
+        == MAX_CAREER_TEXT_CHARACTERS
     )
 
     assert app.selectbox[0].label == (
@@ -105,6 +117,8 @@ def test_app_renders_job_search_form_after_profile_confirmation() -> None:
         "target_roles": [
             "software developer",
             "backend developer",
+            "data analyst",
+            "QA engineer",
         ],
         "preferred_locations": ["Adelaide"],
     }
@@ -112,12 +126,36 @@ def test_app_renders_job_search_form_after_profile_confirmation() -> None:
     app.session_state[JOB_QUERIES_KEY] = (
         "software developer",
         "backend developer",
+        "data analyst",
+        "QA engineer",
     )
     app.session_state[PROFILE_REVISION_KEY] = 2
 
     app.run()
 
-    assert len(app.exception) == 0
+    roles_input = next(
+        text_area
+        for text_area in app.text_area
+        if text_area.label == "Roles to search for"
+    )
+
+    assert len(
+        roles_input.value.splitlines()
+    ) == MAX_JOB_QUERIES
+
+    assert str(MAX_JOB_QUERIES) in roles_input.help
+
+    max_results_input = next(
+        number_input
+        for number_input in app.number_input
+        if number_input.label
+        == "Maximum listings per role"
+    )
+
+    assert (
+        max_results_input.max
+        == MAX_JOB_RESULTS_PER_QUERY
+    )
 
     assert any(
         text_area.label == "Roles to search for"
@@ -299,6 +337,18 @@ def test_document_input_offers_scanned_pdf_recognition_when_ai_available() -> No
 
         input_method.set_value("document")
         app.run()
+
+        additional_preferences_input = next(
+            text_area
+            for text_area in app.text_area
+            if text_area.label
+            == "Additional career preferences (optional)"
+        )
+
+        assert (
+            additional_preferences_input.max_chars
+            == MAX_ADDITIONAL_PREFERENCES_CHARACTERS
+        )
 
     assert len(app.exception) == 0
 
@@ -484,6 +534,11 @@ def test_voice_input_renders_editable_transcript() -> None:
     assert transcript_editor.value == (
         "I want a junior backend developer role in Adelaide. "
         "I know Python and SQL."
+    )
+
+    assert (
+        transcript_editor.max_chars
+        == MAX_TRANSCRIPT_CHARACTERS
     )
 
     assert any(

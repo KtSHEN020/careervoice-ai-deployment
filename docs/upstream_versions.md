@@ -8,7 +8,7 @@ This document records the exact original repository commits used to create the d
 | Job recommendation | preference-aware-job-recommender | `c04006f` | Imported |
 | Job collection | job-listing-collector | `176f213` | Imported |
 | Workflow coordination | careervoice-ai-orchestrator | `06211a6` | Imported |
-| Web application | careervoice-ai-web-app | `a40c6a9` | Imported |
+| Web application | careervoice-ai-web-app | `80e3136` | Imported |
 
 ## Import policy
 
