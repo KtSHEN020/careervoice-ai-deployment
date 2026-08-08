@@ -1,0 +1,31 @@
+[project]
+name = "careervoice-ai-orchestrator"
+version = "0.1.0"
+description = "Orchestrate the CareerVoice AI workflow across profile extraction, job collection, and job recommendation repositories."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.scripts]
+careervoice-run = "careervoice_ai_orchestrator.cli:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.3",
+    "ruff>=0.15.12",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]

@@ -5,6 +5,7 @@ description = "Deployment assembly for the CareerVoice AI web application."
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "careervoice-ai-orchestrator==0.1.0",
     "job-listing-collector==0.1.0",
     "preference-aware-job-recommender==0.1.0",
     "voice-career-profile-extractor==0.1.0",
@@ -20,6 +21,7 @@ dev = [
 package = false
 
 [tool.uv.sources]
+"careervoice-ai-orchestrator" = { path = "packages/careervoice-ai-orchestrator" }
 "job-listing-collector" = { path = "packages/job-listing-collector" }
 "preference-aware-job-recommender" = { path = "packages/preference-aware-job-recommender" }
 "voice-career-profile-extractor" = { path = "packages/voice-career-profile-extractor" }
@@ -27,6 +29,7 @@ package = false
 [tool.pytest.ini_options]
 testpaths = [
     "tests",
+    "packages/careervoice-ai-orchestrator/tests",
     "packages/job-listing-collector/tests",
     "packages/preference-aware-job-recommender/tests",
     "packages/voice-career-profile-extractor/tests",
