@@ -1,0 +1,57 @@
+[
+  {
+    "job_id": "example_001",
+    "title": "Junior Backend Developer",
+    "company": "Example Tech",
+    "location": "Adelaide",
+    "work_type": "hybrid",
+    "seniority": "junior",
+    "description": "Build and maintain backend services using Python, SQL, and Git. Docker is preferred.",
+    "required_skills": ["Python", "SQL", "Git"],
+    "preferred_skills": ["Docker"],
+    "responsibilities": ["Build and maintain backend services using Python, SQL, and Git."],
+    "tags": ["backend development", "data", "devops", "software engineering"],
+    "source": "example_source",
+    "source_url": "https://example.com/jobs/001",
+    "collected_at": "2026-06-20T10:00:00Z"
+  },
+  {
+    "job_id": "example_002",
+    "title": "Graduate Software Developer",
+    "company": "Sample Software Studio",
+    "location": "Adelaide",
+    "work_type": "onsite",
+    "seniority": "junior",
+    "description": "Develop software features, test application changes, and collaborate with the engineering team.",
+    "required_skills": ["Git"],
+    "preferred_skills": ["Python", "React"],
+    "responsibilities": [
+      "Develop software features.",
+      "Test application changes.",
+      "Collaborate with the engineering team."
+    ],
+    "tags": ["frontend development", "software engineering"],
+    "source": "example_source",
+    "source_url": "https://example.com/jobs/002",
+    "collected_at": "2026-06-20T10:05:00Z"
+  },
+  {
+    "job_id": "example_003",
+    "title": "Data Analyst",
+    "company": "Example Analytics",
+    "location": "Remote",
+    "work_type": "remote",
+    "seniority": "mid",
+    "description": "Analyze business data, write SQL queries, and create reports using Python and Pandas.",
+    "required_skills": ["SQL", "Python", "Pandas"],
+    "preferred_skills": [],
+    "responsibilities": [
+      "Analyze business data.",
+      "Create reports using Python and Pandas."
+    ],
+    "tags": ["data", "software engineering"],
+    "source": "example_source",
+    "source_url": "https://example.com/jobs/003",
+    "collected_at": "2026-06-20T10:10:00Z"
+  }
+]

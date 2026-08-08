@@ -42,4 +42,4 @@ Never commit:
 
 ## Current status
 
-Step 15C: career-profile extractor and job-recommender deployment snapshots imported.
+Step 15C: career-profile extractor, job-recommender, and job-collector deployment snapshots imported.
