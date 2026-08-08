@@ -5,6 +5,7 @@ import pytest
 
 from preference_aware_job_recommender.llm_scorer import (
     DEFAULT_LLM_MODEL,
+    MAX_LLM_OUTPUT_TOKENS,
     score_job_with_llm,
 )
 from preference_aware_job_recommender.models import LLMJobEvaluation
@@ -121,6 +122,10 @@ def test_score_job_with_llm_sends_expected_request() -> None:
 
     assert received_arguments["model"] == DEFAULT_LLM_MODEL
     assert received_arguments["text_format"] is LLMJobEvaluation
+    assert (
+        received_arguments["max_output_tokens"]
+        == MAX_LLM_OUTPUT_TOKENS
+    )
     assert received_arguments["input"][0]["role"] == "developer"
 
     submitted_data = json.loads(

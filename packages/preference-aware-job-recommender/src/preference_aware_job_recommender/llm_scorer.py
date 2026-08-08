@@ -9,6 +9,7 @@ from preference_aware_job_recommender.scoring import get_recommendation_level
 
 
 DEFAULT_LLM_MODEL = "gpt-5.4-mini"
+MAX_LLM_OUTPUT_TOKENS = 1200
 
 LLM_SCORING_INSTRUCTIONS = """
 Evaluate how well one structured job listing matches one structured career profile.
@@ -41,6 +42,7 @@ class ResponsesAPI(Protocol):
         model: str,
         input: list[dict[str, str]],
         text_format: type[LLMJobEvaluation],
+        max_output_tokens: int,
     ) -> Any:
         """Request and parse a structured response."""
 
@@ -113,6 +115,7 @@ def score_job_with_llm(
             },
         ],
         text_format=LLMJobEvaluation,
+        max_output_tokens=MAX_LLM_OUTPUT_TOKENS,
     )
 
     evaluation = response.output_parsed
