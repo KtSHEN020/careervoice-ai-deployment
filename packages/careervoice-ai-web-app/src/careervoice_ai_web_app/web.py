@@ -6,9 +6,6 @@ from collections.abc import Mapping, Sequence
 
 import streamlit as st
 
-from careervoice_ai_web_app.ai_usage import (
-    SessionAIUsageBudget,
-)
 from careervoice_ai_web_app.errors import OrchestrationError
 from careervoice_ai_web_app.orchestrator_gateway import (
     Repo4OrchestratorGateway,
@@ -32,6 +29,7 @@ from careervoice_ai_web_app.runtime_config import (
 )
 from careervoice_ai_web_app.session_workspace import SessionWorkspace
 from careervoice_ai_web_app.ui_state import (
+    AUTHENTICATED_APP_USER_KEY,
     COLLECTED_JOBS_KEY,
     JOB_QUERIES_KEY,
     JOB_SEARCH_SETTINGS_KEY,
@@ -44,6 +42,10 @@ from careervoice_ai_web_app.ui_state import (
     record_profile_confirmation,
     record_profile_extraction,
 )
+from careervoice_ai_web_app.usage_budget_factory import (
+    build_ai_usage_budget,
+)
+from careervoice_ai_web_app.user_models import AppUser
 from careervoice_ai_web_app.voice_transcription import (
     Repo1VoiceTranscriber,
 )
@@ -60,6 +62,18 @@ RUNTIME_FEATURE_NAMES = {
 }
 
 VOICE_TRANSCRIPT_KEY = "voice_transcript_text"
+
+
+def _current_app_user() -> AppUser | None:
+    """Return the authenticated CareerVoice user for this web session."""
+    value = st.session_state.get(
+        AUTHENTICATED_APP_USER_KEY
+    )
+
+    if isinstance(value, AppUser):
+        return value
+
+    return None
 
 
 def _profile_extractor_options(
@@ -1266,8 +1280,9 @@ def main() -> None:
     service = CareerVoiceWorkflowService(
         Repo4OrchestratorGateway(),
         voice_transcriber=Repo1VoiceTranscriber(),
-        ai_usage_budget=SessionAIUsageBudget(
-            st.session_state
+        ai_usage_budget=build_ai_usage_budget(
+            state=st.session_state,
+            app_user=_current_app_user(),
         ),
     )
 

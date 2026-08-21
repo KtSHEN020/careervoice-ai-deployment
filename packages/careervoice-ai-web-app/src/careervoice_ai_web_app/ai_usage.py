@@ -1,13 +1,20 @@
-"""Session-level safeguards for AI-assisted application features."""
+"""Safeguards for AI-assisted application features."""
 
 from __future__ import annotations
 
 from collections.abc import MutableMapping
 from dataclasses import dataclass
+from typing import Protocol
+
+from careervoice_ai_web_app.persistent_usage import UsageOperation
 
 AI_USAGE_UNITS_KEY = "ai_usage_units"
 
-MAX_AI_USAGE_UNITS_PER_SESSION = 20
+MAX_AI_USAGE_UNITS_PER_DAY = 20
+
+# Keep the existing name for compatibility with the current
+# session-based implementation and tests.
+MAX_AI_USAGE_UNITS_PER_SESSION = MAX_AI_USAGE_UNITS_PER_DAY
 
 PROFILE_EXTRACTION_AI_UNITS = 1
 VOICE_TRANSCRIPTION_AI_UNITS = 1
@@ -16,7 +23,21 @@ AI_RANKING_AI_UNITS = 10
 
 
 class AIUsageLimitError(ValueError):
-    """Raised when an AI-assisted action exceeds the session allowance."""
+    """Raised when an AI-assisted action exceeds its allowance."""
+
+
+class SupportsAIUsageBudget(Protocol):
+    """AI allowance interface required by the workflow service."""
+
+    def reserve(
+        self,
+        units: int,
+        *,
+        feature: str,
+        operation: UsageOperation | None = None,
+    ) -> None:
+        """Reserve usage before an AI-assisted operation begins."""
+        ...
 
 
 def _stored_usage(
@@ -73,6 +94,7 @@ class SessionAIUsageBudget:
         units: int,
         *,
         feature: str,
+        operation: UsageOperation | None = None,
     ) -> None:
         """Reserve allowance before an AI-assisted operation begins."""
         if (

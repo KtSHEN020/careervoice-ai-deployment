@@ -4,6 +4,7 @@ from collections.abc import Mapping, MutableMapping, Sequence
 from copy import deepcopy
 
 WORKSPACE_SESSION_ID_KEY = "workspace_session_id"
+AUTHENTICATED_APP_USER_KEY = "authenticated_app_user"
 
 PROFILE_KEY = "career_profile"
 PROFILE_EXTRACTOR_KEY = "profile_extractor"

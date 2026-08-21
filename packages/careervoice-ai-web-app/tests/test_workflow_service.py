@@ -18,6 +18,7 @@ from careervoice_ai_web_app.ai_usage import (
     SessionAIUsageBudget,
 )
 from careervoice_ai_web_app.document_recognition import RecognizedDocument
+from careervoice_ai_web_app.persistent_usage import UsageOperation
 from careervoice_ai_web_app.public_limits import (
     MAX_ADDITIONAL_PREFERENCES_CHARACTERS,
     MAX_CAREER_TEXT_CHARACTERS,
@@ -109,6 +110,28 @@ class FakeVoiceTranscriber:
 
         return VoiceTranscript(
             text=self.transcript,
+        )
+
+
+class RecordingAIUsageBudget:
+    def __init__(self) -> None:
+        self.reservations: list[
+            tuple[int, str, UsageOperation | None]
+        ] = []
+
+    def reserve(
+        self,
+        units: int,
+        *,
+        feature: str,
+        operation: UsageOperation | None = None,
+    ) -> None:
+        self.reservations.append(
+            (
+                units,
+                feature,
+                operation,
+            )
         )
 
 
@@ -963,14 +986,12 @@ def test_transcribe_voice_requires_transcriber() -> None:
 def test_llm_profile_extraction_reserves_ai_usage(
     tmp_path: Path,
 ) -> None:
-    state: dict[str, object] = {}
+    budget = RecordingAIUsageBudget()
     gateway = FakeOrchestratorGateway()
 
     service = CareerVoiceWorkflowService(
         gateway,
-        ai_usage_budget=SessionAIUsageBudget(
-            state
-        ),
+        ai_usage_budget=budget,
     )
 
     workspace = SessionWorkspace.create(
@@ -983,10 +1004,13 @@ def test_llm_profile_extraction_reserves_ai_usage(
         workspace=workspace,
     )
 
-    assert (
-        state[AI_USAGE_UNITS_KEY]
-        == PROFILE_EXTRACTION_AI_UNITS
-    )
+    assert budget.reservations == [
+        (
+            PROFILE_EXTRACTION_AI_UNITS,
+            "AI-assisted profile creation",
+            UsageOperation.PROFILE_EXTRACTION,
+        )
+    ]
 
 
 def test_rules_profile_extraction_does_not_use_ai_allowance(
@@ -1019,14 +1043,12 @@ def test_rules_profile_extraction_does_not_use_ai_allowance(
 
 
 def test_voice_transcription_reserves_ai_usage() -> None:
-    state: dict[str, object] = {}
+    budget = RecordingAIUsageBudget()
 
     service = CareerVoiceWorkflowService(
         FakeOrchestratorGateway(),
         voice_transcriber=FakeVoiceTranscriber(),
-        ai_usage_budget=SessionAIUsageBudget(
-            state
-        ),
+        ai_usage_budget=budget,
     )
 
     service.transcribe_voice(
@@ -1035,24 +1057,25 @@ def test_voice_transcription_reserves_ai_usage() -> None:
         media_type="audio/wav",
     )
 
-    assert (
-        state[AI_USAGE_UNITS_KEY]
-        == VOICE_TRANSCRIPTION_AI_UNITS
-    )
+    assert budget.reservations == [
+        (
+            VOICE_TRANSCRIPTION_AI_UNITS,
+            "voice transcription",
+            UsageOperation.VOICE_TRANSCRIPTION,
+        )
+    ]
 
 
 def test_scanned_document_recognition_reserves_ai_usage(
     tmp_path: Path,
 ) -> None:
-    state: dict[str, object] = {}
+    budget = RecordingAIUsageBudget()
     gateway = FakeOrchestratorGateway()
 
     service = CareerVoiceWorkflowService(
         gateway,
         document_recognizer=FakeDocumentRecognizer(),
-        ai_usage_budget=SessionAIUsageBudget(
-            state
-        ),
+        ai_usage_budget=budget,
     )
 
     workspace = SessionWorkspace.create(
@@ -1068,23 +1091,24 @@ def test_scanned_document_recognition_reserves_ai_usage(
         allow_image_recognition=True,
     )
 
-    assert (
-        state[AI_USAGE_UNITS_KEY]
-        == DOCUMENT_RECOGNITION_AI_UNITS
-    )
+    assert budget.reservations == [
+        (
+            DOCUMENT_RECOGNITION_AI_UNITS,
+            "scanned-document recognition",
+            UsageOperation.DOCUMENT_RECOGNITION,
+        )
+    ]
 
 
 def test_llm_ranking_reserves_ai_usage(
     tmp_path: Path,
 ) -> None:
-    state: dict[str, object] = {}
+    budget = RecordingAIUsageBudget()
     gateway = FakeOrchestratorGateway()
 
     service = CareerVoiceWorkflowService(
         gateway,
-        ai_usage_budget=SessionAIUsageBudget(
-            state
-        ),
+        ai_usage_budget=budget,
     )
 
     workspace = SessionWorkspace.create(
@@ -1107,10 +1131,13 @@ def test_llm_ranking_reserves_ai_usage(
         workspace=workspace,
     )
 
-    assert (
-        state[AI_USAGE_UNITS_KEY]
-        == AI_RANKING_AI_UNITS
-    )
+    assert budget.reservations == [
+        (
+            AI_RANKING_AI_UNITS,
+            "AI-assisted job ranking",
+            UsageOperation.AI_RANKING,
+        )
+    ]
 
 
 def test_ai_usage_limit_blocks_ai_operation_before_gateway(

@@ -11,7 +11,7 @@ from careervoice_ai_web_app.ai_usage import (
     DOCUMENT_RECOGNITION_AI_UNITS,
     PROFILE_EXTRACTION_AI_UNITS,
     VOICE_TRANSCRIPTION_AI_UNITS,
-    SessionAIUsageBudget,
+    SupportsAIUsageBudget,
 )
 from careervoice_ai_web_app.document_input import (
     NoReadablePdfTextError,
@@ -28,6 +28,7 @@ from careervoice_ai_web_app.models import (
 from careervoice_ai_web_app.orchestrator_gateway import (
     SupportsOrchestratorGateway,
 )
+from careervoice_ai_web_app.persistent_usage import UsageOperation
 from careervoice_ai_web_app.public_limits import (
     MAX_ADDITIONAL_PREFERENCES_CHARACTERS,
     MAX_CAREER_TEXT_CHARACTERS,
@@ -112,7 +113,7 @@ class CareerVoiceWorkflowService:
         *,
         document_recognizer: SupportsDocumentRecognizer | None = None,
         voice_transcriber: SupportsVoiceTranscriber | None = None,
-        ai_usage_budget: SessionAIUsageBudget | None = None,
+        ai_usage_budget: SupportsAIUsageBudget | None = None,
     ) -> None:
         self.gateway = gateway
         self._document_recognizer = document_recognizer
@@ -124,14 +125,16 @@ class CareerVoiceWorkflowService:
         units: int,
         *,
         feature: str,
+        operation: UsageOperation,
     ) -> None:
-        """Reserve session allowance when AI usage controls are enabled."""
+        """Reserve allowance when AI usage controls are enabled."""
         if self._ai_usage_budget is None:
             return
 
         self._ai_usage_budget.reserve(
             units,
             feature=feature,
+            operation=operation,
         )
 
     def extract_text_profile(
@@ -163,6 +166,7 @@ class CareerVoiceWorkflowService:
             self._reserve_ai_usage(
                 PROFILE_EXTRACTION_AI_UNITS,
                 feature="AI-assisted profile creation",
+                operation=UsageOperation.PROFILE_EXTRACTION,
             )
 
         workspace.ensure_exists()
@@ -209,6 +213,7 @@ class CareerVoiceWorkflowService:
         self._reserve_ai_usage(
             VOICE_TRANSCRIPTION_AI_UNITS,
             feature="voice transcription",
+            operation=UsageOperation.VOICE_TRANSCRIPTION,
         )
 
         transcript = transcriber.transcribe(
@@ -338,6 +343,7 @@ class CareerVoiceWorkflowService:
         self._reserve_ai_usage(
             DOCUMENT_RECOGNITION_AI_UNITS,
             feature="scanned-document recognition",
+            operation=UsageOperation.DOCUMENT_RECOGNITION,
         )
 
         recognized_document = recognizer.recognize(
@@ -459,6 +465,7 @@ class CareerVoiceWorkflowService:
             self._reserve_ai_usage(
                 AI_RANKING_AI_UNITS,
                 feature="AI-assisted job ranking",
+                operation=UsageOperation.AI_RANKING,
             )
 
         config = self._build_config(
