@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Protocol
 
 from supabase import create_client
-from supabase.lib.client_options import ClientOptions
+from supabase.client import ClientOptions
 
 from careervoice_ai_web_app.authentication import (
     AuthenticationError,
