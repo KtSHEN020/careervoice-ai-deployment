@@ -40,9 +40,10 @@ class PostgresAppUserRepository:
                         auth_provider,
                         auth_subject,
                         enabled
-                    from public.app_users
-                    where auth_provider = %s
-                      and auth_subject = %s
+                    from public.find_app_user_by_identity(
+                        %s,
+                        %s
+                    )
                     """,
                     (
                         identity.provider,

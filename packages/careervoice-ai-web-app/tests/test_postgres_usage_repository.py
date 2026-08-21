@@ -129,6 +129,25 @@ def test_get_daily_usage_returns_persisted_row() -> None:
         job_searches=4,
     )
 
+    query, params = (
+        connection.cursor_instance.executions[0]
+    )
+
+    assert (
+        "from public.get_daily_usage"
+        in query.lower()
+    )
+
+    assert (
+        "from public.daily_usage"
+        not in query.lower()
+    )
+
+    assert params == (
+        user.id,
+        usage_date,
+    )
+
 
 def test_get_daily_usage_returns_zero_snapshot_when_missing() -> None:
     user = _user()

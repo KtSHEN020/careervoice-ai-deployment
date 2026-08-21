@@ -47,9 +47,10 @@ class PostgresPersistentUsageRepository(PersistentUsageRepository):
                         document_recognitions,
                         ai_ranking_runs,
                         job_searches
-                    from public.daily_usage
-                    where user_id = %s
-                      and usage_date = %s
+                    from public.get_daily_usage(
+                        %s,
+                        %s
+                    )
                     """,
                     (
                         user.id,

@@ -126,9 +126,12 @@ def test_find_by_identity_returns_user() -> None:
 
     query, params = connection.cursor_instance.executions[0]
 
-    assert "from public.app_users" in query.lower()
-    assert "auth_provider = %s" in query.lower()
-    assert "auth_subject = %s" in query.lower()
+    assert (
+        "from public.find_app_user_by_identity"
+        in query.lower()
+    )
+
+    assert "from public.app_users" not in query.lower()
 
     assert params == (
         "supabase",
