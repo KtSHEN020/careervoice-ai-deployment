@@ -6,7 +6,10 @@ from collections.abc import Mapping, Sequence
 
 import streamlit as st
 
+from careervoice_ai_web_app.auth_runtime import build_login_controller
+from careervoice_ai_web_app.authentication import AuthenticationError
 from careervoice_ai_web_app.errors import OrchestrationError
+from careervoice_ai_web_app.login_controller import LoginController
 from careervoice_ai_web_app.orchestrator_gateway import (
     Repo4OrchestratorGateway,
 )
@@ -29,13 +32,17 @@ from careervoice_ai_web_app.runtime_config import (
 )
 from careervoice_ai_web_app.session_workspace import SessionWorkspace
 from careervoice_ai_web_app.ui_state import (
-    AUTHENTICATED_APP_USER_KEY,
     COLLECTED_JOBS_KEY,
     JOB_QUERIES_KEY,
     JOB_SEARCH_SETTINGS_KEY,
+    LOGIN_CODE_KEY,
+    LOGIN_CODE_REQUESTED_KEY,
+    LOGIN_EMAIL_KEY,
+    LOGIN_PENDING_EMAIL_KEY,
     PROFILE_CONFIRMED_KEY,
     PROFILE_KEY,
     WORKSPACE_SESSION_ID_KEY,
+    clear_login_form_state,
     job_search_widget_key,
     profile_widget_key,
     record_job_search,
@@ -45,7 +52,7 @@ from careervoice_ai_web_app.ui_state import (
 from careervoice_ai_web_app.usage_budget_factory import (
     build_ai_usage_budget,
 )
-from careervoice_ai_web_app.user_models import AppUser
+from careervoice_ai_web_app.user_access import UserAccessError
 from careervoice_ai_web_app.voice_transcription import (
     Repo1VoiceTranscriber,
 )
@@ -64,16 +71,184 @@ RUNTIME_FEATURE_NAMES = {
 VOICE_TRANSCRIPT_KEY = "voice_transcript_text"
 
 
-def _current_app_user() -> AppUser | None:
-    """Return the authenticated CareerVoice user for this web session."""
-    value = st.session_state.get(
-        AUTHENTICATED_APP_USER_KEY
+def _render_login(
+    controller: LoginController,
+) -> None:
+    """Render the approved-user email login flow."""
+    st.title("CareerVoice AI")
+    st.subheader("Sign in to continue")
+
+    st.write(
+        "Access is limited to approved users."
     )
 
-    if isinstance(value, AppUser):
-        return value
+    code_requested = (
+        st.session_state.get(
+            LOGIN_CODE_REQUESTED_KEY
+        )
+        is True
+    )
 
-    return None
+    if not code_requested:
+        with st.form(
+            "login_email_form"
+        ):
+            email = st.text_input(
+                "Email",
+                key=LOGIN_EMAIL_KEY,
+            )
+
+            submitted = st.form_submit_button(
+                "Send login code",
+                use_container_width=True,
+            )
+
+        if not submitted:
+            return
+
+        cleaned_email = email.strip()
+
+        if not cleaned_email:
+            st.error(
+                "Enter your email address."
+            )
+            return
+
+        try:
+            controller.request_login_code(
+                cleaned_email
+            )
+        except ValueError:
+            st.error(
+                "Enter a valid email address."
+            )
+            return
+        except AuthenticationError:
+            # Keep approved and unapproved email behaviour
+            # indistinguishable in the user interface.
+            pass
+        except Exception:
+            LOGGER.exception(
+                "Unexpected login-code request failure."
+            )
+
+        st.session_state[
+            LOGIN_PENDING_EMAIL_KEY
+        ] = cleaned_email
+
+        st.session_state[
+            LOGIN_CODE_REQUESTED_KEY
+        ] = True
+
+        st.rerun()
+        return
+
+    email_value = st.session_state.get(
+        LOGIN_PENDING_EMAIL_KEY
+    )
+
+    if (
+        not isinstance(email_value, str)
+        or not email_value.strip()
+    ):
+        clear_login_form_state(
+            st.session_state
+        )
+        st.rerun()
+        return
+
+    email = email_value.strip()
+
+    st.info(
+        "If this email has access, a login code has been sent. "
+        "Check your inbox and spam folder."
+    )
+
+    with st.form(
+        "login_code_form"
+    ):
+        code = st.text_input(
+            "Login code",
+            type="password",
+            key=LOGIN_CODE_KEY,
+        )
+
+        submitted = st.form_submit_button(
+            "Sign in",
+            use_container_width=True,
+        )
+
+    if submitted:
+        cleaned_code = code.strip()
+
+        if not cleaned_code:
+            st.error(
+                "Enter the login code from your email."
+            )
+        else:
+            try:
+                controller.verify_login_code(
+                    email=email,
+                    code=cleaned_code,
+                )
+            except (
+                AuthenticationError,
+                UserAccessError,
+            ):
+                st.error(
+                    "We couldn't sign you in. "
+                    "Check the code and try again, "
+                    "or contact the person who gave you access."
+                )
+            except Exception:
+                LOGGER.exception(
+                    "Unexpected sign-in failure."
+                )
+
+                st.error(
+                    "Sign-in is temporarily unavailable. "
+                    "Please try again later."
+                )
+            else:
+                st.rerun()
+                return
+
+    st.button(
+        "Use a different email",
+        on_click=clear_login_form_state,
+        args=(
+            st.session_state,
+        ),
+    )
+
+
+def _render_account_controls(
+    controller: LoginController,
+) -> None:
+    """Render controls for the current signed-in user."""
+    user = controller.current_user
+
+    if user is None:
+        return
+
+    st.sidebar.caption(
+        f"Signed in as {user.email}"
+    )
+
+    if st.sidebar.button(
+        "Sign out",
+        use_container_width=True,
+    ):
+        try:
+            controller.sign_out()
+        except Exception:
+            # LoginController clears local state even when
+            # provider sign-out fails.
+            LOGGER.exception(
+                "Provider sign-out failed."
+            )
+
+        st.rerun()
 
 
 def _profile_extractor_options(
@@ -1270,6 +1445,46 @@ def main() -> None:
         layout="wide",
     )
 
+    try:
+        login_controller = build_login_controller(
+            state=st.session_state,
+        )
+    except Exception:
+        LOGGER.exception(
+            "Unable to initialize authentication."
+        )
+
+        st.title("CareerVoice AI")
+
+        st.error(
+            "Sign-in is temporarily unavailable. "
+            "Please contact the application administrator."
+        )
+        return
+
+    if not login_controller.is_authenticated:
+        _render_login(
+            login_controller
+        )
+        return
+
+    clear_login_form_state(
+        st.session_state
+    )
+
+    _render_account_controls(
+        login_controller
+    )
+
+    app_user = login_controller.current_user
+
+    if app_user is None:
+        st.error(
+            "Your session could not be verified. "
+            "Please sign in again."
+        )
+        return
+
     st.title("CareerVoice AI")
 
     st.write(
@@ -1282,7 +1497,7 @@ def main() -> None:
         voice_transcriber=Repo1VoiceTranscriber(),
         ai_usage_budget=build_ai_usage_budget(
             state=st.session_state,
-            app_user=_current_app_user(),
+            app_user=app_user,
         ),
     )
 

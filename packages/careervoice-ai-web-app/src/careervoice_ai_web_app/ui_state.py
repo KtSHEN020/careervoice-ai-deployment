@@ -5,6 +5,12 @@ from copy import deepcopy
 
 WORKSPACE_SESSION_ID_KEY = "workspace_session_id"
 AUTHENTICATED_APP_USER_KEY = "authenticated_app_user"
+AUTHENTICATION_SESSION_KEY = "authentication_session"
+
+LOGIN_EMAIL_KEY = "login_email"
+LOGIN_PENDING_EMAIL_KEY = "login_pending_email"
+LOGIN_CODE_KEY = "login_code"
+LOGIN_CODE_REQUESTED_KEY = "login_code_requested"
 
 PROFILE_KEY = "career_profile"
 PROFILE_EXTRACTOR_KEY = "profile_extractor"
@@ -18,6 +24,29 @@ JOB_SEARCH_REVISION_KEY = "job_search_revision"
 
 RECOMMENDATION_SETTINGS_KEY = "recommendation_settings"
 RECOMMENDATIONS_KEY = "recommendations"
+
+
+def clear_user_session_state(
+    state: MutableMapping[str, object],
+) -> None:
+    """Remove all browser-session data when the current user signs out."""
+    state.clear()
+
+
+def clear_login_form_state(
+    state: MutableMapping[str, object],
+) -> None:
+    """Remove temporary login-form values from browser state."""
+    for key in (
+        LOGIN_EMAIL_KEY,
+        LOGIN_PENDING_EMAIL_KEY,
+        LOGIN_CODE_KEY,
+        LOGIN_CODE_REQUESTED_KEY,
+    ):
+        state.pop(
+            key,
+            None,
+        )
 
 
 def _integer_state_value(

@@ -2,9 +2,14 @@ from __future__ import annotations
 
 from pathlib import Path
 from unittest.mock import patch
+from uuid import UUID
 
+import pytest
 from streamlit.testing.v1 import AppTest
 
+from careervoice_ai_web_app.authentication import (
+    AuthenticationSession,
+)
 from careervoice_ai_web_app.public_limits import (
     MAX_ADDITIONAL_PREFERENCES_CHARACTERS,
     MAX_CAREER_TEXT_CHARACTERS,
@@ -13,11 +18,19 @@ from careervoice_ai_web_app.public_limits import (
     MAX_TRANSCRIPT_CHARACTERS,
 )
 from careervoice_ai_web_app.ui_state import (
+    AUTHENTICATED_APP_USER_KEY,
+    AUTHENTICATION_SESSION_KEY,
     COLLECTED_JOBS_KEY,
     JOB_QUERIES_KEY,
+    LOGIN_CODE_REQUESTED_KEY,
+    LOGIN_PENDING_EMAIL_KEY,
     PROFILE_CONFIRMED_KEY,
     PROFILE_KEY,
     PROFILE_REVISION_KEY,
+)
+from careervoice_ai_web_app.user_models import (
+    AppUser,
+    AuthenticatedIdentity,
 )
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -29,11 +42,152 @@ WEB_PATH = (
     / "web.py"
 )
 
+@pytest.fixture(autouse=True)
+def _configure_auth_runtime(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Provide non-secret test configuration for the login runtime."""
+    monkeypatch.setenv(
+        "SUPABASE_URL",
+        "https://example.supabase.co",
+    )
+    monkeypatch.setenv(
+        "SUPABASE_PUBLISHABLE_KEY",
+        "test-publishable-key",
+    )
+    monkeypatch.setenv(
+        "DATABASE_HOST",
+        "example.pooler.supabase.com",
+    )
+    monkeypatch.setenv(
+        "DATABASE_PORT",
+        "5432",
+    )
+    monkeypatch.setenv(
+        "DATABASE_NAME",
+        "postgres",
+    )
+    monkeypatch.setenv(
+        "DATABASE_USER",
+        "postgres.example",
+    )
+    monkeypatch.setenv(
+        "DATABASE_PASSWORD",
+        "test-password",
+    )
+    monkeypatch.setenv(
+        "DATABASE_SSLMODE",
+        "require",
+    )
 
-def test_app_renders_profile_input_form() -> None:
+
+def _authenticated_app() -> AppTest:
+    """Create an AppTest with an authorized CareerVoice user session."""
+    identity = AuthenticatedIdentity(
+        provider="supabase",
+        subject="auth-user-123",
+        email="tester@example.com",
+    )
+
+    authentication_session = AuthenticationSession(
+        identity=identity,
+        access_token="test-access-token",
+        refresh_token="test-refresh-token",
+        expires_at=1_800_000_000,
+    )
+
+    app_user = AppUser(
+        id=UUID(
+            "12345678-1234-5678-1234-567812345678"
+        ),
+        email="tester@example.com",
+        auth_provider="supabase",
+        auth_subject="auth-user-123",
+        enabled=True,
+    )
+
+    app = AppTest.from_file(
+        str(APP_PATH)
+    )
+
+    app.session_state[
+        AUTHENTICATION_SESSION_KEY
+    ] = authentication_session
+
+    app.session_state[
+        AUTHENTICATED_APP_USER_KEY
+    ] = app_user
+
+    return app
+
+
+def test_unauthenticated_user_sees_login_page() -> None:
     app = AppTest.from_file(
         str(APP_PATH)
     ).run()
+
+    assert len(app.exception) == 0
+
+    assert app.title[0].value == (
+        "CareerVoice AI"
+    )
+
+    assert any(
+        subheader.value == "Sign in to continue"
+        for subheader in app.subheader
+    )
+
+    assert any(
+        text_input.label == "Email"
+        for text_input in app.text_input
+    )
+
+    assert any(
+        button.label == "Send login code"
+        for button in app.button
+    )
+
+    assert not any(
+        subheader.value == "Tell us about your career"
+        for subheader in app.subheader
+    )
+
+
+def test_login_code_page_uses_persisted_pending_email() -> None:
+    app = AppTest.from_file(
+        str(APP_PATH)
+    )
+
+    app.session_state[
+        LOGIN_CODE_REQUESTED_KEY
+    ] = True
+
+    app.session_state[
+        LOGIN_PENDING_EMAIL_KEY
+    ] = "tester@example.com"
+
+    app.run()
+
+    assert len(app.exception) == 0
+
+    assert any(
+        text_input.label == "Login code"
+        for text_input in app.text_input
+    )
+
+    assert any(
+        button.label == "Sign in"
+        for button in app.button
+    )
+
+    assert not any(
+        text_input.label == "Email"
+        for text_input in app.text_input
+    )
+
+
+def test_app_renders_profile_input_form() -> None:
+    app = _authenticated_app().run()
 
     assert len(app.exception) == 0
     assert app.title[0].value == "CareerVoice AI"
@@ -64,7 +218,7 @@ def test_app_renders_profile_input_form() -> None:
 
 
 def test_app_renders_editable_profile_review_fields() -> None:
-    app = AppTest.from_file(str(APP_PATH))
+    app = _authenticated_app()
     app.session_state[PROFILE_KEY] = {
         "target_roles": ["software developer"],
         "skills": ["Python"],
@@ -112,7 +266,7 @@ def test_app_renders_editable_profile_review_fields() -> None:
 
 
 def test_app_renders_job_search_form_after_profile_confirmation() -> None:
-    app = AppTest.from_file(str(APP_PATH))
+    app = _authenticated_app()
     app.session_state[PROFILE_KEY] = {
         "target_roles": [
             "software developer",
@@ -184,7 +338,7 @@ def test_app_renders_job_search_form_after_profile_confirmation() -> None:
 
 
 def test_app_renders_collected_job_preview() -> None:
-    app = AppTest.from_file(str(APP_PATH))
+    app = _authenticated_app()
     app.session_state[PROFILE_KEY] = {
         "target_roles": ["software developer"],
         "preferred_locations": ["Adelaide"],
@@ -243,7 +397,7 @@ def test_profile_form_uses_standard_mode_when_ai_is_unavailable() -> None:
         },
         clear=False,
     ):
-        app = AppTest.from_file(str(APP_PATH)).run()
+        app = _authenticated_app().run()
 
     assert len(app.exception) == 0
 
@@ -266,7 +420,7 @@ def test_profile_form_offers_ai_mode_when_ai_is_available() -> None:
         },
         clear=False,
     ):
-        app = AppTest.from_file(str(APP_PATH)).run()
+        app = _authenticated_app().run()
 
     assert len(app.exception) == 0
 
@@ -291,7 +445,7 @@ def test_job_search_is_disabled_without_provider_configuration() -> None:
         },
         clear=False,
     ):
-        app = AppTest.from_file(str(APP_PATH))
+        app = _authenticated_app()
 
         app.session_state[PROFILE_KEY] = {
             "target_roles": ["software developer"],
@@ -324,7 +478,7 @@ def test_document_input_offers_scanned_pdf_recognition_when_ai_available() -> No
         },
         clear=False,
     ):
-        app = AppTest.from_file(str(APP_PATH))
+        app = _authenticated_app()
 
         app.run()
 
@@ -367,7 +521,7 @@ def test_document_input_hides_scanned_pdf_recognition_without_ai() -> None:
         },
         clear=False,
     ):
-        app = AppTest.from_file(str(APP_PATH))
+        app = _authenticated_app()
 
         app.run()
 
@@ -391,9 +545,7 @@ def test_document_input_hides_scanned_pdf_recognition_without_ai() -> None:
 
 
 def test_app_offers_voice_input_method() -> None:
-    app = AppTest.from_file(
-        str(APP_PATH)
-    ).run()
+    app = _authenticated_app().run()
 
     assert len(app.exception) == 0
 
@@ -415,9 +567,7 @@ def test_voice_input_renders_transcription_controls_when_ai_available() -> None:
         },
         clear=False,
     ):
-        app = AppTest.from_file(
-            str(APP_PATH)
-        )
+        app = _authenticated_app()
 
         app.run()
 
@@ -453,9 +603,7 @@ def test_voice_input_reports_unavailable_ai_transcription() -> None:
         },
         clear=False,
     ):
-        app = AppTest.from_file(
-            str(APP_PATH)
-        )
+        app = _authenticated_app()
 
         app.run()
 
@@ -497,9 +645,7 @@ def test_voice_input_renders_editable_transcript() -> None:
         },
         clear=False,
     ):
-        app = AppTest.from_file(
-            str(APP_PATH)
-        )
+        app = _authenticated_app()
 
         app.session_state[
             "voice_transcript_text"

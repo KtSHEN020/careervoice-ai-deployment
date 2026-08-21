@@ -1,13 +1,20 @@
 from __future__ import annotations
 
 from pathlib import Path
+from uuid import UUID
 
+import pytest
 from streamlit.testing.v1 import AppTest
 
+from careervoice_ai_web_app.authentication import (
+    AuthenticationSession,
+)
 from careervoice_ai_web_app.public_limits import (
     MAX_RECOMMENDATIONS,
 )
 from careervoice_ai_web_app.ui_state import (
+    AUTHENTICATED_APP_USER_KEY,
+    AUTHENTICATION_SESSION_KEY,
     COLLECTED_JOBS_KEY,
     JOB_QUERIES_KEY,
     JOB_SEARCH_REVISION_KEY,
@@ -17,14 +24,84 @@ from careervoice_ai_web_app.ui_state import (
     RECOMMENDATION_SETTINGS_KEY,
     RECOMMENDATIONS_KEY,
 )
+from careervoice_ai_web_app.user_models import (
+    AppUser,
+    AuthenticatedIdentity,
+)
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 APP_PATH = PROJECT_ROOT / "app.py"
 
 
+@pytest.fixture(autouse=True)
+def _configure_auth_runtime(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Provide non-secret authentication configuration for UI tests."""
+    monkeypatch.setenv(
+        "SUPABASE_URL",
+        "https://example.supabase.co",
+    )
+    monkeypatch.setenv(
+        "SUPABASE_PUBLISHABLE_KEY",
+        "test-publishable-key",
+    )
+    monkeypatch.setenv(
+        "DATABASE_HOST",
+        "example.pooler.supabase.com",
+    )
+    monkeypatch.setenv(
+        "DATABASE_PORT",
+        "5432",
+    )
+    monkeypatch.setenv(
+        "DATABASE_NAME",
+        "postgres",
+    )
+    monkeypatch.setenv(
+        "DATABASE_USER",
+        "postgres.example",
+    )
+    monkeypatch.setenv(
+        "DATABASE_PASSWORD",
+        "test-password",
+    )
+    monkeypatch.setenv(
+        "DATABASE_SSLMODE",
+        "require",
+    )
+
+
 def _seed_completed_job_search(
     app: AppTest,
 ) -> None:
+    identity = AuthenticatedIdentity(
+        provider="supabase",
+        subject="auth-user-123",
+        email="tester@example.com",
+    )
+
+    app.session_state[
+        AUTHENTICATION_SESSION_KEY
+    ] = AuthenticationSession(
+        identity=identity,
+        access_token="test-access-token",
+        refresh_token="test-refresh-token",
+        expires_at=1_800_000_000,
+    )
+
+    app.session_state[
+        AUTHENTICATED_APP_USER_KEY
+    ] = AppUser(
+        id=UUID(
+            "12345678-1234-5678-1234-567812345678"
+        ),
+        email="tester@example.com",
+        auth_provider="supabase",
+        auth_subject="auth-user-123",
+        enabled=True,
+    )
+
     app.session_state[PROFILE_KEY] = {
         "target_roles": [
             "software developer",
