@@ -9,6 +9,7 @@ from datetime import UTC, date, datetime
 from careervoice_ai_web_app.ai_usage import (
     MAX_AI_USAGE_UNITS_PER_DAY,
     AIUsageLimitError,
+    AIUsageStatus,
 )
 from careervoice_ai_web_app.persistent_usage import (
     PersistentUsageRepository,
@@ -40,6 +41,34 @@ class PersistentAIUsageBudget:
             raise ValueError(
                 "AI usage limit must be a positive integer."
             )
+
+    def status(self) -> AIUsageStatus:
+        """Return today's persisted AI allowance and feature usage."""
+        usage = self.repository.get_daily_usage(
+            user=self.user,
+            usage_date=self.usage_date_factory(),
+        )
+
+        return AIUsageStatus(
+            limit=self.limit,
+            used=usage.ai_units_used,
+            remaining=max(
+                0,
+                self.limit - usage.ai_units_used,
+            ),
+            profile_extractions=(
+                usage.ai_profile_extractions
+            ),
+            voice_transcriptions=(
+                usage.voice_transcriptions
+            ),
+            document_recognitions=(
+                usage.document_recognitions
+            ),
+            ai_ranking_runs=(
+                usage.ai_ranking_runs
+            ),
+        )
 
     def reserve(
         self,

@@ -7,6 +7,13 @@ from collections.abc import Mapping, Sequence
 
 import streamlit as st
 
+from careervoice_ai_web_app.ai_usage import (
+    AI_RANKING_AI_UNITS,
+    DOCUMENT_RECOGNITION_AI_UNITS,
+    PROFILE_EXTRACTION_AI_UNITS,
+    VOICE_TRANSCRIPTION_AI_UNITS,
+    SupportsAIUsageBudget,
+)
 from careervoice_ai_web_app.auth_runtime import build_login_controller
 from careervoice_ai_web_app.authentication import AuthenticationError
 from careervoice_ai_web_app.errors import OrchestrationError
@@ -333,6 +340,98 @@ def _render_account_controls(
             )
 
         st.rerun()
+
+
+def _run_label(count: int) -> str:
+    """Return the correct singular or plural usage label."""
+    return "run" if count == 1 else "runs"
+
+
+def _render_ai_usage_status(
+    budget: SupportsAIUsageBudget,
+) -> None:
+    """Show the current user's daily AI allowance and feature usage."""
+    st.sidebar.divider()
+
+    st.sidebar.subheader(
+        "AI assistance today"
+    )
+
+    try:
+        status = budget.status()
+    except Exception:
+        LOGGER.exception(
+            "Unable to load AI usage status."
+        )
+
+        st.sidebar.caption(
+            "AI usage information is temporarily unavailable."
+        )
+        return
+
+    if status.limit > 0:
+        progress = min(
+            1.0,
+            max(
+                0.0,
+                status.used / status.limit,
+            ),
+        )
+    else:
+        progress = 0.0
+
+    st.sidebar.write(
+        f"**{status.used} / {status.limit} AI units used**"
+    )
+
+    st.sidebar.progress(
+        progress
+    )
+
+    st.sidebar.caption(
+        f"{status.remaining} AI units remaining"
+    )
+
+    st.sidebar.markdown(
+        "**Today's usage**"
+    )
+
+    st.sidebar.write(
+        "AI profile creation  \n"
+        f"{status.profile_extractions} "
+        f"{_run_label(status.profile_extractions)} "
+        f"× {PROFILE_EXTRACTION_AI_UNITS} unit"
+    )
+
+    st.sidebar.write(
+        "Voice transcription  \n"
+        f"{status.voice_transcriptions} "
+        f"{_run_label(status.voice_transcriptions)} "
+        f"× {VOICE_TRANSCRIPTION_AI_UNITS} unit"
+    )
+
+    st.sidebar.write(
+        "Document recognition  \n"
+        f"{status.document_recognitions} "
+        f"{_run_label(status.document_recognitions)} "
+        f"× {DOCUMENT_RECOGNITION_AI_UNITS} unit"
+    )
+
+    st.sidebar.write(
+        "AI job ranking  \n"
+        f"{status.ai_ranking_runs} "
+        f"{_run_label(status.ai_ranking_runs)} "
+        f"× {AI_RANKING_AI_UNITS} units"
+    )
+
+    st.sidebar.caption(
+        "All AI features share the same "
+        f"{status.limit}-unit daily allowance."
+    )
+
+    st.sidebar.caption(
+        "Resets daily at 00:00 UTC."
+    )
 
 
 def _profile_extractor_options(
@@ -1576,13 +1675,15 @@ def main() -> None:
         "job recommendations."
     )
 
+    ai_usage_budget = build_ai_usage_budget(
+        state=st.session_state,
+        app_user=app_user,
+    )
+
     service = CareerVoiceWorkflowService(
         Repo4OrchestratorGateway(),
         voice_transcriber=Repo1VoiceTranscriber(),
-        ai_usage_budget=build_ai_usage_budget(
-            state=st.session_state,
-            app_user=app_user,
-        ),
+        ai_usage_budget=ai_usage_budget,
     )
 
     missing_commands = (
@@ -1628,4 +1729,8 @@ def main() -> None:
             _get_or_create_workspace
         ),
         render_error=_render_error,
+    )
+
+    _render_ai_usage_status(
+        ai_usage_budget
     )

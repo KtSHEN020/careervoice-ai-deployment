@@ -4,6 +4,7 @@ from careervoice_ai_web_app.ai_usage import (
     AI_USAGE_UNITS_KEY,
     MAX_AI_USAGE_UNITS_PER_SESSION,
     AIUsageLimitError,
+    AIUsageStatus,
     SessionAIUsageBudget,
 )
 
@@ -91,3 +92,17 @@ def test_ai_usage_budget_ignores_invalid_stored_value() -> None:
     )
 
     assert budget.used == 1
+
+
+def test_ai_usage_budget_reports_status() -> None:
+    state: dict[str, object] = {
+        AI_USAGE_UNITS_KEY: 7,
+    }
+
+    budget = SessionAIUsageBudget(state)
+
+    assert budget.status() == AIUsageStatus(
+        limit=20,
+        used=7,
+        remaining=13,
+    )

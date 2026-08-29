@@ -6,8 +6,14 @@ from uuid import UUID
 import pytest
 from streamlit.testing.v1 import AppTest
 
+from careervoice_ai_web_app.ai_usage import (
+    AIUsageStatus,
+)
 from careervoice_ai_web_app.authentication import (
     AuthenticationSession,
+)
+from careervoice_ai_web_app.persistent_ai_usage import (
+    PersistentAIUsageBudget,
 )
 from careervoice_ai_web_app.public_limits import (
     MAX_RECOMMENDATIONS,
@@ -69,6 +75,19 @@ def _configure_auth_runtime(
     monkeypatch.setenv(
         "DATABASE_SSLMODE",
         "require",
+    )
+    monkeypatch.setattr(
+        PersistentAIUsageBudget,
+        "status",
+        lambda self: AIUsageStatus(
+            limit=20,
+            used=7,
+            remaining=13,
+            profile_extractions=2,
+            voice_transcriptions=1,
+            document_recognitions=0,
+            ai_ranking_runs=0,
+        ),
     )
 
 

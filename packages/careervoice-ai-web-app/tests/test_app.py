@@ -8,8 +8,14 @@ from uuid import UUID
 import pytest
 from streamlit.testing.v1 import AppTest
 
+from careervoice_ai_web_app.ai_usage import (
+    AIUsageStatus,
+)
 from careervoice_ai_web_app.authentication import (
     AuthenticationSession,
+)
+from careervoice_ai_web_app.persistent_ai_usage import (
+    PersistentAIUsageBudget,
 )
 from careervoice_ai_web_app.public_limits import (
     MAX_ADDITIONAL_PREFERENCES_CHARACTERS,
@@ -80,6 +86,19 @@ def _configure_auth_runtime(
     monkeypatch.setenv(
         "DATABASE_SSLMODE",
         "require",
+    )
+    monkeypatch.setattr(
+        PersistentAIUsageBudget,
+        "status",
+        lambda self: AIUsageStatus(
+            limit=20,
+            used=7,
+            remaining=13,
+            profile_extractions=2,
+            voice_transcriptions=1,
+            document_recognitions=0,
+            ai_ranking_runs=0,
+        ),
     )
 
 
@@ -707,3 +726,50 @@ def test_voice_input_renders_editable_transcript() -> None:
         button.label == "Generate career profile"
         for button in app.button
     )
+
+
+def test_authenticated_user_sees_ai_usage_status() -> None:
+    app = _authenticated_app().run()
+
+    assert len(app.exception) == 0
+
+    assert any(
+        subheader.value == "AI assistance today"
+        for subheader in app.sidebar.subheader
+    )
+
+    captions = [
+        caption.value
+        for caption in app.sidebar.caption
+    ]
+
+    assert "13 AI units remaining" in captions
+    assert "Resets daily at 00:00 UTC." in captions
+
+    assert any(
+        markdown.value == "**7 / 20 AI units used**"
+        for markdown in app.sidebar.markdown
+    )
+
+    sidebar_text = " ".join(
+        element.value
+        for element in app.sidebar.markdown
+        if isinstance(
+            element.value,
+            str,
+        )
+    )
+
+    assert "Today's usage" in sidebar_text
+
+    assert "AI profile creation" in sidebar_text
+    assert "2 runs × 1 unit" in sidebar_text
+
+    assert "Voice transcription" in sidebar_text
+    assert "1 run × 1 unit" in sidebar_text
+
+    assert "Document recognition" in sidebar_text
+    assert "0 runs × 1 unit" in sidebar_text
+
+    assert "AI job ranking" in sidebar_text
+    assert "0 runs × 10 units" in sidebar_text

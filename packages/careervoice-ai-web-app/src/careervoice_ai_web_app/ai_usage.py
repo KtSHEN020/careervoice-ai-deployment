@@ -21,6 +21,18 @@ VOICE_TRANSCRIPTION_AI_UNITS = 1
 DOCUMENT_RECOGNITION_AI_UNITS = 1
 AI_RANKING_AI_UNITS = 10
 
+@dataclass(frozen=True)
+class AIUsageStatus:
+    """Current AI allowance and per-feature usage visible to the user."""
+
+    limit: int
+    used: int
+    remaining: int
+    profile_extractions: int = 0
+    voice_transcriptions: int = 0
+    document_recognitions: int = 0
+    ai_ranking_runs: int = 0
+
 
 class AIUsageLimitError(ValueError):
     """Raised when an AI-assisted action exceeds its allowance."""
@@ -28,6 +40,9 @@ class AIUsageLimitError(ValueError):
 
 class SupportsAIUsageBudget(Protocol):
     """AI allowance interface required by the workflow service."""
+    def status(self) -> AIUsageStatus:
+        """Return the current AI allowance status."""
+        ...
 
     def reserve(
         self,
@@ -87,6 +102,14 @@ class SessionAIUsageBudget:
         return max(
             0,
             self.limit - self.used,
+        )
+
+    def status(self) -> AIUsageStatus:
+        """Return the current session allowance."""
+        return AIUsageStatus(
+            limit=self.limit,
+            used=self.used,
+            remaining=self.remaining,
         )
 
     def reserve(
