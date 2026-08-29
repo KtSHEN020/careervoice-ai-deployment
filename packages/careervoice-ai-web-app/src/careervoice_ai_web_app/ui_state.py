@@ -11,6 +11,7 @@ LOGIN_EMAIL_KEY = "login_email"
 LOGIN_PENDING_EMAIL_KEY = "login_pending_email"
 LOGIN_CODE_KEY = "login_code"
 LOGIN_CODE_REQUESTED_KEY = "login_code_requested"
+LOGIN_CODE_SENT_AT_KEY = "login_code_sent_at"
 
 PROFILE_KEY = "career_profile"
 PROFILE_EXTRACTOR_KEY = "profile_extractor"
@@ -42,6 +43,7 @@ def clear_login_form_state(
         LOGIN_PENDING_EMAIL_KEY,
         LOGIN_CODE_KEY,
         LOGIN_CODE_REQUESTED_KEY,
+        LOGIN_CODE_SENT_AT_KEY,
     ):
         state.pop(
             key,

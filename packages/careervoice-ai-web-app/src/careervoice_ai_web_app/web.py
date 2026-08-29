@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import time
 from collections.abc import Mapping, Sequence
 
 import streamlit as st
@@ -10,6 +11,9 @@ from careervoice_ai_web_app.auth_runtime import build_login_controller
 from careervoice_ai_web_app.authentication import AuthenticationError
 from careervoice_ai_web_app.errors import OrchestrationError
 from careervoice_ai_web_app.login_controller import LoginController
+from careervoice_ai_web_app.login_resend import (
+    remaining_resend_seconds,
+)
 from careervoice_ai_web_app.orchestrator_gateway import (
     Repo4OrchestratorGateway,
 )
@@ -37,6 +41,7 @@ from careervoice_ai_web_app.ui_state import (
     JOB_SEARCH_SETTINGS_KEY,
     LOGIN_CODE_KEY,
     LOGIN_CODE_REQUESTED_KEY,
+    LOGIN_CODE_SENT_AT_KEY,
     LOGIN_EMAIL_KEY,
     LOGIN_PENDING_EMAIL_KEY,
     PROFILE_CONFIRMED_KEY,
@@ -140,6 +145,10 @@ def _render_login(
             LOGIN_CODE_REQUESTED_KEY
         ] = True
 
+        st.session_state[
+            LOGIN_CODE_SENT_AT_KEY
+        ] = time.time()
+
         st.rerun()
         return
 
@@ -212,6 +221,81 @@ def _render_login(
             else:
                 st.rerun()
                 return
+
+    sent_at = st.session_state.get(
+        LOGIN_CODE_SENT_AT_KEY
+    )
+
+    remaining_seconds = remaining_resend_seconds(
+        sent_at,
+        now=time.time(),
+    )
+
+    question_col, resend_col, _ = st.columns(
+        [1.5, 1.1, 7.1],
+        vertical_alignment="center",
+    )
+
+    with question_col:
+        st.write(
+            "Didn't receive a code?"
+        )
+
+    with resend_col:
+        resend_clicked = st.button(
+            "Resend code",
+            use_container_width=False,
+        )
+
+    if remaining_seconds > 0:
+        st.caption(
+            "You can request another code in "
+            f"{remaining_seconds} seconds."
+        )
+
+    if resend_clicked:
+        now = time.time()
+
+        remaining_seconds = remaining_resend_seconds(
+            st.session_state.get(
+                LOGIN_CODE_SENT_AT_KEY
+            ),
+            now=now,
+        )
+
+        if remaining_seconds > 0:
+            st.warning(
+                "Please wait "
+                f"{remaining_seconds} seconds "
+                "before requesting another code."
+            )
+        else:
+            try:
+                controller.request_login_code(
+                    email
+                )
+            except ValueError:
+                st.error(
+                    "We couldn't request another login code. "
+                    "Please try using a different email."
+                )
+            except AuthenticationError:
+                # Keep approved and unapproved email behaviour
+                # indistinguishable.
+                pass
+            except Exception:
+                LOGGER.exception(
+                    "Unexpected login-code resend failure."
+                )
+
+            st.session_state[
+                LOGIN_CODE_SENT_AT_KEY
+            ] = now
+
+            st.success(
+                "If this email has access, "
+                "a new login code has been sent."
+            )
 
     st.button(
         "Use a different email",

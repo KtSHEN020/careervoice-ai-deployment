@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import time
 from pathlib import Path
 from unittest.mock import patch
 from uuid import UUID
@@ -23,6 +24,7 @@ from careervoice_ai_web_app.ui_state import (
     COLLECTED_JOBS_KEY,
     JOB_QUERIES_KEY,
     LOGIN_CODE_REQUESTED_KEY,
+    LOGIN_CODE_SENT_AT_KEY,
     LOGIN_PENDING_EMAIL_KEY,
     PROFILE_CONFIRMED_KEY,
     PROFILE_KEY,
@@ -166,6 +168,10 @@ def test_login_code_page_uses_persisted_pending_email() -> None:
         LOGIN_PENDING_EMAIL_KEY
     ] = "tester@example.com"
 
+    app.session_state[
+        LOGIN_CODE_SENT_AT_KEY
+    ] = time.time()
+
     app.run()
 
     assert len(app.exception) == 0
@@ -183,6 +189,16 @@ def test_login_code_page_uses_persisted_pending_email() -> None:
     assert not any(
         text_input.label == "Email"
         for text_input in app.text_input
+    )
+
+    assert any(
+        button.label == "Resend code"
+        for button in app.button
+    )
+
+    assert any(
+        button.label == "Use a different email"
+        for button in app.button
     )
 
 
