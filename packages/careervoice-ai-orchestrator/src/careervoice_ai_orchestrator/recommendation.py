@@ -8,7 +8,9 @@ from careervoice_ai_orchestrator.command_runner import (
 from careervoice_ai_orchestrator.models import WorkflowConfig
 
 
-def build_recommendation_command(config: WorkflowConfig) -> list[str]:
+def build_recommendation_command(
+    config: WorkflowConfig,
+) -> list[str]:
     """
     Build the command used to call the preference-aware-job-recommender CLI.
     """
@@ -23,14 +25,31 @@ def build_recommendation_command(config: WorkflowConfig) -> list[str]:
     ]
 
     if config.exclude_rejected:
-        command.append("--exclude-rejected")
+        command.append(
+            "--exclude-rejected"
+        )
 
     command.extend(
         [
             "--scorer",
             config.recommender_scorer,
+        ]
+    )
+
+    if config.output_language != "en":
+        command.extend(
+            [
+                "--output-language",
+                config.output_language,
+            ]
+        )
+
+    command.extend(
+        [
             "--output",
-            str(config.recommendations_output_path),
+            str(
+                config.recommendations_output_path
+            ),
         ]
     )
 

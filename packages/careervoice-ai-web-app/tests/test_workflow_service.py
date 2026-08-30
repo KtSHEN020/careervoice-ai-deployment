@@ -1144,7 +1144,7 @@ def test_ai_usage_limit_blocks_ai_operation_before_gateway(
     tmp_path: Path,
 ) -> None:
     state: dict[str, object] = {
-        AI_USAGE_UNITS_KEY: 20,
+        AI_USAGE_UNITS_KEY: 40,
     }
 
     gateway = FakeOrchestratorGateway()
@@ -1171,7 +1171,7 @@ def test_ai_usage_limit_blocks_ai_operation_before_gateway(
         )
 
     assert gateway.extract_profile_calls == []
-    assert state[AI_USAGE_UNITS_KEY] == 20
+    assert state[AI_USAGE_UNITS_KEY] == 40
 
 
 def test_oversized_career_text_is_rejected_before_ai_usage(
@@ -1370,4 +1370,89 @@ def test_oversized_voice_transcript_is_rejected() -> None:
             filename="career-voice.wav",
             content=b"fake-wav-content",
             media_type="audio/wav",
+        )
+
+
+def test_profile_extraction_config_uses_selected_output_language(
+    tmp_path: Path,
+) -> None:
+    gateway = FakeOrchestratorGateway()
+
+    service = CareerVoiceWorkflowService(
+        gateway,
+        output_language="zh-CN",
+    )
+
+    workspace = SessionWorkspace.create(
+        root_dir=tmp_path,
+    )
+
+    service.extract_text_profile(
+        career_preference_text=(
+            "I want a software role."
+        ),
+        extractor="llm",
+        workspace=workspace,
+    )
+
+    config, _ = (
+        gateway.extract_profile_calls[0]
+    )
+
+    assert (
+        config.output_language
+        == "zh-CN"
+    )
+
+
+def test_recommendation_config_uses_selected_output_language(
+    tmp_path: Path,
+) -> None:
+    gateway = FakeOrchestratorGateway()
+
+    service = CareerVoiceWorkflowService(
+        gateway,
+        output_language="zh-CN",
+    )
+
+    workspace = SessionWorkspace.create(
+        root_dir=tmp_path,
+    )
+
+    workspace.profile_path.write_text(
+        "{}",
+        encoding="utf-8",
+    )
+
+    workspace.jobs_output_path.write_text(
+        "[]",
+        encoding="utf-8",
+    )
+
+    service.rank_jobs(
+        scorer="llm",
+        max_results=5,
+        exclude_rejected=False,
+        workspace=workspace,
+    )
+
+    config = (
+        gateway
+        .generate_recommendation_calls[0]
+    )
+
+    assert (
+        config.output_language
+        == "zh-CN"
+    )
+
+
+def test_workflow_service_rejects_unsupported_output_language() -> None:
+    with pytest.raises(
+        ValueError,
+        match="Unsupported output language",
+    ):
+        CareerVoiceWorkflowService(
+            FakeOrchestratorGateway(),
+            output_language="fr",
         )

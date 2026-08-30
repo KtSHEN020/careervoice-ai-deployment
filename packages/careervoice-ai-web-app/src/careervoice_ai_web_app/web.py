@@ -17,6 +17,13 @@ from careervoice_ai_web_app.ai_usage import (
 from careervoice_ai_web_app.auth_runtime import build_login_controller
 from careervoice_ai_web_app.authentication import AuthenticationError
 from careervoice_ai_web_app.errors import OrchestrationError
+from careervoice_ai_web_app.i18n import (
+    LANGUAGE_LABELS,
+    AppLanguage,
+    get_app_language,
+    set_app_language,
+    translate,
+)
 from careervoice_ai_web_app.login_controller import LoginController
 from careervoice_ai_web_app.login_resend import (
     remaining_resend_seconds,
@@ -74,24 +81,101 @@ from careervoice_ai_web_app.workflow_service import (
 
 LOGGER = logging.getLogger(__name__)
 
-RUNTIME_FEATURE_NAMES = {
-    "career-profile-extract": "Career profile creation",
-    "job-collect": "Job searching",
-    "job-recommend": "Job recommendation generation",
+RUNTIME_FEATURE_TRANSLATION_KEYS = {
+    "career-profile-extract": "runtime.feature.profile",
+    "job-collect": "runtime.feature.jobs",
+    "job-recommend": "runtime.feature.recommendations",
 }
 
 VOICE_TRANSCRIPT_KEY = "voice_transcript_text"
+LOGIN_LANGUAGE_SELECTOR_KEY = "login_language_selector"
+SIDEBAR_LANGUAGE_SELECTOR_KEY = "sidebar_language_selector"
+
+
+def _t(
+    key: str,
+    **values: object,
+) -> str:
+    """Translate a user-facing string using the current UI language."""
+    return translate(
+        get_app_language(
+            st.session_state
+        ),
+        key,
+        **values,
+    )
+
+
+def _render_language_selector(
+    *,
+    sidebar: bool,
+) -> None:
+    """Render the ENG / 简体中文 language selector."""
+    current_language = get_app_language(
+        st.session_state
+    )
+
+    options = [
+        AppLanguage.ENGLISH,
+        AppLanguage.SIMPLIFIED_CHINESE,
+    ]
+
+    container = (
+        st.sidebar
+        if sidebar
+        else st
+    )
+
+    selector_key = (
+        SIDEBAR_LANGUAGE_SELECTOR_KEY
+        if sidebar
+        else LOGIN_LANGUAGE_SELECTOR_KEY
+    )
+
+    selected_language = container.segmented_control(
+        _t("language.label"),
+        options=options,
+        default=current_language,
+        format_func=lambda language: (
+            LANGUAGE_LABELS[language]
+        ),
+        key=selector_key,
+        label_visibility="collapsed",
+    )
+
+    if (
+        isinstance(
+            selected_language,
+            AppLanguage,
+        )
+        and selected_language
+        is not current_language
+    ):
+        set_app_language(
+            st.session_state,
+            selected_language,
+        )
+        st.rerun()
 
 
 def _render_login(
     controller: LoginController,
 ) -> None:
     """Render the approved-user email login flow."""
-    st.title("CareerVoice AI")
-    st.subheader("Sign in to continue")
+    _render_language_selector(
+        sidebar=False
+    )
+
+    st.title(
+        _t("app.title")
+    )
+
+    st.subheader(
+        _t("login.sign_in")
+    )
 
     st.write(
-        "Access is limited to approved users."
+        _t("login.access_limited")
     )
 
     code_requested = (
@@ -106,12 +190,12 @@ def _render_login(
             "login_email_form"
         ):
             email = st.text_input(
-                "Email",
+                _t("login.email"),
                 key=LOGIN_EMAIL_KEY,
             )
 
             submitted = st.form_submit_button(
-                "Send login code",
+                _t("login.send_code"),
                 use_container_width=True,
             )
 
@@ -122,7 +206,7 @@ def _render_login(
 
         if not cleaned_email:
             st.error(
-                "Enter your email address."
+                _t("login.enter_email")
             )
             return
 
@@ -132,12 +216,12 @@ def _render_login(
             )
         except ValueError:
             st.error(
-                "Enter a valid email address."
+                _t("login.invalid_email")
             )
             return
         except AuthenticationError:
             # Keep approved and unapproved email behaviour
-            # indistinguishable in the user interface.
+            # indistinguishable in the UI.
             pass
         except Exception:
             LOGGER.exception(
@@ -176,21 +260,20 @@ def _render_login(
     email = email_value.strip()
 
     st.info(
-        "If this email has access, a login code has been sent. "
-        "Check your inbox and spam folder."
+        _t("login.code_sent")
     )
 
     with st.form(
         "login_code_form"
     ):
         code = st.text_input(
-            "Login code",
+            _t("login.code"),
             type="password",
             key=LOGIN_CODE_KEY,
         )
 
         submitted = st.form_submit_button(
-            "Sign in",
+            _t("login.submit"),
             use_container_width=True,
         )
 
@@ -199,7 +282,7 @@ def _render_login(
 
         if not cleaned_code:
             st.error(
-                "Enter the login code from your email."
+                _t("login.enter_code")
             )
         else:
             try:
@@ -212,9 +295,7 @@ def _render_login(
                 UserAccessError,
             ):
                 st.error(
-                    "We couldn't sign you in. "
-                    "Check the code and try again, "
-                    "or contact the person who gave you access."
+                    _t("login.failed")
                 )
             except Exception:
                 LOGGER.exception(
@@ -222,10 +303,11 @@ def _render_login(
                 )
 
                 st.error(
-                    "Sign-in is temporarily unavailable. "
-                    "Please try again later."
+                    _t("login.unavailable")
                 )
             else:
+                # Login form state is cleared safely on the
+                # authenticated rerun in main().
                 st.rerun()
                 return
 
@@ -239,25 +321,27 @@ def _render_login(
     )
 
     question_col, resend_col, _ = st.columns(
-        [1.5, 1.1, 7.1],
+        [1.6, 1.5, 7.0],
         vertical_alignment="center",
     )
 
     with question_col:
         st.write(
-            "Didn't receive a code?"
+            _t("login.did_not_receive")
         )
 
     with resend_col:
         resend_clicked = st.button(
-            "Resend code",
+            _t("login.resend"),
             use_container_width=False,
         )
 
     if remaining_seconds > 0:
         st.caption(
-            "You can request another code in "
-            f"{remaining_seconds} seconds."
+            _t(
+                "login.resend_in",
+                seconds=remaining_seconds,
+            )
         )
 
     if resend_clicked:
@@ -272,9 +356,10 @@ def _render_login(
 
         if remaining_seconds > 0:
             st.warning(
-                "Please wait "
-                f"{remaining_seconds} seconds "
-                "before requesting another code."
+                _t(
+                    "login.wait_resend",
+                    seconds=remaining_seconds,
+                )
             )
         else:
             try:
@@ -283,8 +368,7 @@ def _render_login(
                 )
             except ValueError:
                 st.error(
-                    "We couldn't request another login code. "
-                    "Please try using a different email."
+                    _t("login.resend_error")
                 )
             except AuthenticationError:
                 # Keep approved and unapproved email behaviour
@@ -300,12 +384,11 @@ def _render_login(
             ] = now
 
             st.success(
-                "If this email has access, "
-                "a new login code has been sent."
+                _t("login.resend_sent")
             )
 
     st.button(
-        "Use a different email",
+        _t("login.use_different_email"),
         on_click=clear_login_form_state,
         args=(
             st.session_state,
@@ -322,12 +405,19 @@ def _render_account_controls(
     if user is None:
         return
 
+    _render_language_selector(
+        sidebar=True
+    )
+
     st.sidebar.caption(
-        f"Signed in as {user.email}"
+        _t(
+            "account.signed_in_as",
+            email=user.email,
+        )
     )
 
     if st.sidebar.button(
-        "Sign out",
+        _t("account.sign_out"),
         use_container_width=True,
     ):
         try:
@@ -342,19 +432,55 @@ def _render_account_controls(
         st.rerun()
 
 
-def _run_label(count: int) -> str:
-    """Return the correct singular or plural usage label."""
-    return "run" if count == 1 else "runs"
+def _run_label(
+    count: int,
+    language: AppLanguage,
+) -> str:
+    """Return the localized singular or plural run label."""
+    key = (
+        "quota.run"
+        if count == 1
+        else "quota.runs"
+    )
+
+    return translate(
+        language,
+        key,
+    )
+
+
+def _unit_label(
+    units: int,
+    language: AppLanguage,
+) -> str:
+    """Return the localized singular or plural unit label."""
+    key = (
+        "quota.unit"
+        if units == 1
+        else "quota.units"
+    )
+
+    return translate(
+        language,
+        key,
+    )
 
 
 def _render_ai_usage_status(
     budget: SupportsAIUsageBudget,
 ) -> None:
-    """Show the current user's daily AI allowance and feature usage."""
+    """Show the current user's localized AI allowance and usage."""
     st.sidebar.divider()
 
+    language = get_app_language(
+        st.session_state
+    )
+
     st.sidebar.subheader(
-        "AI assistance today"
+        translate(
+            language,
+            "quota.title",
+        )
     )
 
     try:
@@ -365,7 +491,10 @@ def _render_ai_usage_status(
         )
 
         st.sidebar.caption(
-            "AI usage information is temporarily unavailable."
+            translate(
+                language,
+                "quota.unavailable",
+            )
         )
         return
 
@@ -381,7 +510,14 @@ def _render_ai_usage_status(
         progress = 0.0
 
     st.sidebar.write(
-        f"**{status.used} / {status.limit} AI units used**"
+        "**"
+        + translate(
+            language,
+            "quota.used",
+            used=status.used,
+            limit=status.limit,
+        )
+        + "**"
     )
 
     st.sidebar.progress(
@@ -389,48 +525,91 @@ def _render_ai_usage_status(
     )
 
     st.sidebar.caption(
-        f"{status.remaining} AI units remaining"
+        translate(
+            language,
+            "quota.remaining",
+            remaining=status.remaining,
+        )
     )
 
     st.sidebar.markdown(
-        "**Today's usage**"
+        "**"
+        + translate(
+            language,
+            "quota.today",
+        )
+        + "**"
     )
 
     st.sidebar.write(
-        "AI profile creation  \n"
-        f"{status.profile_extractions} "
-        f"{_run_label(status.profile_extractions)} "
-        f"× {PROFILE_EXTRACTION_AI_UNITS} unit"
+        translate(
+            language,
+            "quota.profile",
+        )
+        + "  \n"
+        + (
+            f"{status.profile_extractions} "
+            f"{_run_label(status.profile_extractions, language)} "
+            f"× {PROFILE_EXTRACTION_AI_UNITS} "
+            f"{_unit_label(PROFILE_EXTRACTION_AI_UNITS, language)}"
+        )
     )
 
     st.sidebar.write(
-        "Voice transcription  \n"
-        f"{status.voice_transcriptions} "
-        f"{_run_label(status.voice_transcriptions)} "
-        f"× {VOICE_TRANSCRIPTION_AI_UNITS} unit"
+        translate(
+            language,
+            "quota.voice",
+        )
+        + "  \n"
+        + (
+            f"{status.voice_transcriptions} "
+            f"{_run_label(status.voice_transcriptions, language)} "
+            f"× {VOICE_TRANSCRIPTION_AI_UNITS} "
+            f"{_unit_label(VOICE_TRANSCRIPTION_AI_UNITS, language)}"
+        )
     )
 
     st.sidebar.write(
-        "Document recognition  \n"
-        f"{status.document_recognitions} "
-        f"{_run_label(status.document_recognitions)} "
-        f"× {DOCUMENT_RECOGNITION_AI_UNITS} unit"
+        translate(
+            language,
+            "quota.document",
+        )
+        + "  \n"
+        + (
+            f"{status.document_recognitions} "
+            f"{_run_label(status.document_recognitions, language)} "
+            f"× {DOCUMENT_RECOGNITION_AI_UNITS} "
+            f"{_unit_label(DOCUMENT_RECOGNITION_AI_UNITS, language)}"
+        )
     )
 
     st.sidebar.write(
-        "AI job ranking  \n"
-        f"{status.ai_ranking_runs} "
-        f"{_run_label(status.ai_ranking_runs)} "
-        f"× {AI_RANKING_AI_UNITS} units"
+        translate(
+            language,
+            "quota.ranking",
+        )
+        + "  \n"
+        + (
+            f"{status.ai_ranking_runs} "
+            f"{_run_label(status.ai_ranking_runs, language)} "
+            f"× {AI_RANKING_AI_UNITS} "
+            f"{_unit_label(AI_RANKING_AI_UNITS, language)}"
+        )
     )
 
     st.sidebar.caption(
-        "All AI features share the same "
-        f"{status.limit}-unit daily allowance."
+        translate(
+            language,
+            "quota.shared",
+            limit=status.limit,
+        )
     )
 
     st.sidebar.caption(
-        "Resets daily at 00:00 UTC."
+        translate(
+            language,
+            "quota.reset",
+        )
     )
 
 
@@ -461,8 +640,10 @@ def _get_or_create_workspace() -> SessionWorkspace:
 
 
 def _render_runtime_status() -> frozenset[str]:
-    """Show unavailable application features."""
-    missing_dependencies = missing_runtime_dependencies()
+    """Show localized unavailable application features."""
+    missing_dependencies = (
+        missing_runtime_dependencies()
+    )
 
     missing_commands = frozenset(
         dependency.command
@@ -473,50 +654,121 @@ def _render_runtime_status() -> frozenset[str]:
         return missing_commands
 
     st.warning(
-        "Some features are unavailable because the application setup "
-        "is incomplete."
+        _t("runtime.warning")
     )
 
-    with st.expander("Setup details"):
+    with st.expander(
+        _t("runtime.details")
+    ):
         for dependency in missing_dependencies:
-            feature_name = RUNTIME_FEATURE_NAMES.get(
-                dependency.command,
-                dependency.purpose.capitalize(),
+            translation_key = (
+                RUNTIME_FEATURE_TRANSLATION_KEYS.get(
+                    dependency.command
+                )
             )
 
+            if translation_key is not None:
+                feature_name = _t(
+                    translation_key
+                )
+            else:
+                feature_name = (
+                    dependency.purpose.capitalize()
+                )
+
             st.write(
-                f"{feature_name} is currently unavailable."
+                _t(
+                    "runtime.feature_unavailable",
+                    feature=feature_name,
+                )
             )
 
     return missing_commands
 
 
-def _render_error(error: Exception) -> None:
-    """Display a safe browser error without an uncontrolled traceback."""
-    if isinstance(error, OrchestrationError):
-        st.error(error.user_message)
+def _render_error(
+    error: Exception,
+) -> None:
+    """Display a safe localized browser error."""
+    language = get_app_language(
+        st.session_state
+    )
 
-        if error.stage == "job collection":
-            st.caption(
-                "Check the search settings, internet connection, and "
-                "job-provider credentials configured for this application."
+    if isinstance(
+        error,
+        OrchestrationError,
+    ):
+        if (
+            language
+            is AppLanguage.ENGLISH
+        ):
+            st.error(
+                error.user_message
+            )
+        elif (
+            error.stage
+            == "job collection"
+        ):
+            st.error(
+                _t(
+                    "error.job_collection"
+                )
+            )
+        elif (
+            error.stage
+            == "recommendation generation"
+        ):
+            st.error(
+                _t(
+                    "error.recommendation"
+                )
+            )
+        else:
+            st.error(
+                _t(
+                    "error.action_failed"
+                )
             )
 
-        if error.stage == "recommendation generation":
+        if (
+            error.stage
+            == "job collection"
+        ):
             st.caption(
-                "Try standard ranking, check the internet connection, "
-                "or verify that AI access is configured for this "
-                "application."
+                _t(
+                    "error.job_collection_hint"
+                )
+            )
+
+        if (
+            error.stage
+            == "recommendation generation"
+        ):
+            st.caption(
+                _t(
+                    "error.recommendation_hint"
+                )
             )
 
         if error.technical_details:
-            with st.expander("Technical details"):
-                st.code(error.technical_details)
+            with st.expander(
+                _t(
+                    "error.technical_details"
+                )
+            ):
+                st.code(
+                    error.technical_details
+                )
 
         return
 
-    if isinstance(error, ValueError):
-        st.error(str(error))
+    if isinstance(
+        error,
+        ValueError,
+    ):
+        st.error(
+            str(error)
+        )
         return
 
     LOGGER.exception(
@@ -525,11 +777,16 @@ def _render_error(error: Exception) -> None:
     )
 
     st.error(
-        "An unexpected application error occurred. "
-        "Check the terminal logs for more information."
+        _t(
+            "error.unexpected"
+        )
     )
 
-    with st.expander("Technical details"):
+    with st.expander(
+        _t(
+            "error.technical_details"
+        )
+    ):
         st.code(
             f"{type(error).__name__}: {error}"
         )
@@ -574,33 +831,27 @@ def _render_voice_profile_input(
 ) -> None:
     """Render browser voice recording and transcript review controls."""
     st.write(
-        "Record yourself describing your career background, skills, "
-        "preferences, and what you are looking for next."
+        _t("voice.intro")
     )
 
     if not capabilities.ai_features_available:
         st.warning(
-            "Voice transcription is not currently available because "
-            "AI access is not configured for this application."
+            _t("voice.unavailable")
         )
 
     recorded_audio = st.audio_input(
-        "Record your career information",
+        _t("voice.record"),
         sample_rate=16000,
         disabled=not capabilities.ai_features_available,
-        help=(
-            "Your recording is sent to the configured speech-to-text "
-            "service so it can be converted into editable text."
-        ),
+        help=_t("voice.record_help"),
     )
 
     st.caption(
-        "You will be able to review and edit the transcript before "
-        "CareerVoice AI creates your career profile."
+        _t("voice.review_hint")
     )
 
     transcribe_clicked = st.button(
-        "Transcribe recording",
+        _t("voice.transcribe"),
         disabled=(
             recorded_audio is None
             or not capabilities.ai_features_available
@@ -611,7 +862,7 @@ def _render_voice_profile_input(
     if transcribe_clicked:
         try:
             with st.spinner(
-                "Transcribing your recording..."
+                _t("voice.transcribing")
             ):
                 filename = (
                     getattr(
@@ -642,8 +893,7 @@ def _render_voice_profile_input(
                 ] = transcript.text
 
             st.success(
-                "Recording transcribed. Review the text below before "
-                "generating your career profile."
+                _t("voice.transcribed")
             )
 
         except Exception as error:
@@ -663,57 +913,59 @@ def _render_voice_profile_input(
         return
 
     st.markdown(
-        "#### Review your transcript"
+        "#### "
+        + _t("voice.review_title")
     )
 
     st.write(
-        "Correct anything the transcription misunderstood. "
-        "The edited text, not the original recording, will be used "
-        "to create your career profile."
+        _t("voice.review_intro")
     )
 
     with st.form(
         "voice_profile_form"
     ):
         edited_transcript = st.text_area(
-            "Transcribed career information",
+            _t("voice.transcript_label"),
             height=220,
             max_chars=MAX_TRANSCRIPT_CHARACTERS,
             key=VOICE_TRANSCRIPT_KEY,
-            help=(
-                "Review names, technologies, locations, job titles, "
-                "and other details before continuing. "
-                f"Maximum {MAX_TRANSCRIPT_CHARACTERS:,} characters."
+            help=_t(
+                "voice.transcript_help",
+                max_chars=MAX_TRANSCRIPT_CHARACTERS,
             ),
         )
 
         extractor = st.selectbox(
-            "Profile creation method",
+            _t("profile.extractor.label"),
             options=_profile_extractor_options(
                 capabilities
             ),
             format_func=lambda value: {
-                "rules": "Standard extraction",
-                "llm": "AI-assisted extraction",
+                "rules": _t(
+                    "profile.extractor.standard"
+                ),
+                "llm": _t(
+                    "profile.extractor.ai"
+                ),
             }[value],
             key="voice_profile_extractor",
         )
 
         if capabilities.ai_features_available:
             st.caption(
-                "Voice transcription already uses the configured "
-                "speech-to-text service. Standard profile extraction "
-                "does not make a second AI request; AI-assisted "
-                "extraction does."
+                _t(
+                    "voice.extractor_help_available"
+                )
             )
         else:
             st.caption(
-                "Standard extraction is available. AI-assisted "
-                "extraction is not currently available."
+                _t(
+                    "voice.extractor_help_unavailable"
+                )
             )
 
         submitted = st.form_submit_button(
-            "Generate career profile",
+            _t("profile.generate"),
             type="primary",
             disabled=not extraction_available,
             width="stretch",
@@ -726,12 +978,11 @@ def _render_voice_profile_input(
 
     try:
         with st.status(
-            "Generating your career profile...",
+            _t("profile.generating"),
             expanded=True,
         ) as status:
             st.write(
-                "Analyzing your reviewed transcript and preparing "
-                "the details for review."
+                _t("voice.analyzing")
             )
 
             result = service.extract_text_profile(
@@ -747,14 +998,13 @@ def _render_voice_profile_input(
             )
 
             status.update(
-                label="Career profile generated.",
+                label=_t("profile.generated"),
                 state="complete",
                 expanded=False,
             )
 
         st.success(
-            "Your career profile is ready. Review and correct the "
-            "details before continuing."
+            _t("profile.ready")
         )
 
     except Exception as error:
@@ -768,24 +1018,31 @@ def _render_profile_input(
     capabilities: CapabilityStatus,
 ) -> None:
     """Render career information input and profile creation controls."""
-    st.subheader("Tell us about your career")
+    st.subheader(
+        _t("profile.input.title")
+    )
 
     st.write(
-        "You can write about your career, upload an existing CV or "
-        "career document, or describe your career by speaking."
+        _t("profile.input.intro")
     )
 
     input_method = st.radio(
-        "How would you like to provide your information?",
+        _t("profile.input.method_label"),
         options=(
             "write",
             "document",
             "voice",
         ),
         format_func=lambda value: {
-            "write": "Write or paste",
-            "document": "Upload a document",
-            "voice": "Speak",
+            "write": _t(
+                "profile.input.write"
+            ),
+            "document": _t(
+                "profile.input.document"
+            ),
+            "voice": _t(
+                "profile.input.voice"
+            ),
         }[value],
         horizontal=True,
     )
@@ -798,7 +1055,9 @@ def _render_profile_input(
         )
         return
 
-    with st.form("career_preference_form"):
+    with st.form(
+        "career_preference_form"
+    ):
         career_preference_text = ""
         uploaded_document = None
         additional_preferences = ""
@@ -806,102 +1065,109 @@ def _render_profile_input(
 
         if input_method == "write":
             career_preference_text = st.text_area(
-                "Career information and preferences",
+                _t("profile.text.label"),
                 height=220,
                 max_chars=MAX_CAREER_TEXT_CHARACTERS,
-                placeholder=(
-                    "Example: I am looking for a junior software developer "
-                    "or backend developer role in Adelaide. I prefer hybrid "
-                    "work and have experience with Python and SQL..."
+                placeholder=_t(
+                    "profile.text.placeholder"
                 ),
             )
 
             st.caption(
-                "You can describe your experience, skills, preferred roles, "
-                "locations, work arrangements, constraints, and career goals. "
-                f"Maximum {MAX_CAREER_TEXT_CHARACTERS:,} characters."
+                _t(
+                    "profile.text.help",
+                    max_chars=(
+                        MAX_CAREER_TEXT_CHARACTERS
+                    ),
+                )
             )
 
         else:
             uploaded_document = st.file_uploader(
-                "Upload your CV or career document",
+                _t("profile.document.label"),
                 type=(
                     "txt",
                     "pdf",
                     "docx",
                 ),
-                help=(
-                    "Supported formats: TXT, PDF, and DOCX. "
-                    "Maximum file size: 5 MB."
+                help=_t(
+                    "profile.document.help"
                 ),
             )
 
             if capabilities.ai_features_available:
                 allow_image_recognition = st.checkbox(
-                    "Allow AI recognition for scanned PDFs",
+                    _t(
+                        "profile.document.scan_label"
+                    ),
                     value=False,
-                    help=(
-                        "If the uploaded PDF contains scanned images rather than "
-                        "selectable text, its pages may be sent to the configured "
-                        "AI service so the document text can be recognized."
+                    help=_t(
+                        "profile.document.scan_help"
                     ),
                 )
 
                 st.caption(
-                    "Normal text-based PDFs are read locally. AI recognition is "
-                    "used only when a PDF has no readable text layer and you "
-                    "enable the option above."
+                    _t(
+                        "profile.document.scan_available"
+                    )
                 )
             else:
                 st.caption(
-                    "Text-based PDFs are supported. Scanned or image-only PDFs "
-                    "require AI document recognition, which is not currently "
-                    "available for this application."
+                    _t(
+                        "profile.document.scan_unavailable"
+                    )
                 )
 
             additional_preferences = st.text_area(
-                "Additional career preferences (optional)",
+                _t("profile.additional.label"),
                 height=160,
-                max_chars=MAX_ADDITIONAL_PREFERENCES_CHARACTERS,
-                placeholder=(
-                    "Example: I am looking for junior backend roles in "
-                    "Adelaide. I prefer hybrid work and do not want "
-                    "senior positions."
+                max_chars=(
+                    MAX_ADDITIONAL_PREFERENCES_CHARACTERS
+                ),
+                placeholder=_t(
+                    "profile.additional.placeholder"
                 ),
             )
 
             st.caption(
-                "A CV often describes your experience but not what you want "
-                "next. Add any preferred roles, locations, work arrangements, "
-                "constraints, or career goals that may be missing. "
-                f"Maximum {MAX_ADDITIONAL_PREFERENCES_CHARACTERS:,} characters."
+                _t(
+                    "profile.additional.help",
+                    max_chars=(
+                        MAX_ADDITIONAL_PREFERENCES_CHARACTERS
+                    ),
+                )
             )
 
         extractor = st.selectbox(
-            "Profile creation method",
+            _t("profile.extractor.label"),
             options=_profile_extractor_options(
                 capabilities
             ),
             format_func=lambda value: {
-                "rules": "Standard extraction",
-                "llm": "AI-assisted extraction",
+                "rules": _t(
+                    "profile.extractor.standard"
+                ),
+                "llm": _t(
+                    "profile.extractor.ai"
+                ),
             }[value],
         )
 
         if capabilities.ai_features_available:
             st.caption(
-                "Standard extraction is predictable and does not use an "
-                "external AI service. AI-assisted extraction can understand "
-                "more flexible descriptions."
+                _t(
+                    "profile.extractor.help_available"
+                )
             )
         else:
             st.caption(
-                "Standard extraction is available. AI-assisted extraction "
-                "is not currently available for this application."
+                _t(
+                    "profile.extractor.help_unavailable"
+                )
             )
 
         submitted = st.form_submit_button(
-            "Generate career profile",
+            _t("profile.generate"),
             type="primary",
             disabled=not extraction_available,
             width="stretch",
@@ -914,13 +1180,14 @@ def _render_profile_input(
 
     try:
         with st.status(
-            "Generating your career profile...",
+            _t("profile.generating"),
             expanded=True,
         ) as status:
             if input_method == "write":
                 st.write(
-                    "Analyzing your career information and preparing the "
-                    "details for review."
+                    _t(
+                        "profile.analyzing_text"
+                    )
                 )
 
                 result = service.extract_text_profile(
@@ -932,13 +1199,15 @@ def _render_profile_input(
             else:
                 if uploaded_document is None:
                     raise ValueError(
-                        "Upload a TXT, PDF, or DOCX document before "
-                        "generating your career profile."
+                        _t(
+                            "profile.upload_required"
+                        )
                     )
 
                 st.write(
-                    "Reading your document and combining it with any "
-                    "additional career preferences."
+                    _t(
+                        "profile.reading_document"
+                    )
                 )
 
                 result = service.extract_document_profile(
@@ -957,14 +1226,15 @@ def _render_profile_input(
             )
 
             status.update(
-                label="Career profile generated.",
+                label=_t(
+                    "profile.generated"
+                ),
                 state="complete",
                 expanded=False,
             )
 
         st.success(
-            "Your career profile is ready. Review and correct the details "
-            "before continuing."
+            _t("profile.ready")
         )
 
     except Exception as error:
@@ -975,7 +1245,7 @@ def _render_profile_review(
     *,
     service: CareerVoiceWorkflowService,
 ) -> None:
-    """Render an editable career profile review form."""
+    """Render an editable localized career profile review form."""
     profile_value = st.session_state.get(
         PROFILE_KEY
     )
@@ -984,18 +1254,23 @@ def _render_profile_review(
         return
 
     st.divider()
+
     st.subheader(
-        "Review and edit your career profile"
+        _t("profile.review.title")
     )
 
     st.write(
-        "Check the extracted details and correct anything that is missing "
-        "or inaccurate. These details will be used to search and rank jobs."
+        _t("profile.review.intro")
     )
 
-    with st.form("profile_review_form"):
+    with st.form(
+        "profile_review_form"
+    ):
         st.markdown(
-            "#### Roles, skills, and experience"
+            "#### "
+            + _t(
+                "profile.review.roles_section"
+            )
         )
 
         left_column, right_column = st.columns(
@@ -1005,13 +1280,17 @@ def _render_profile_review(
 
         with left_column:
             target_roles_text = st.text_area(
-                "Target roles",
+                _t(
+                    "profile.review.target_roles"
+                ),
                 value=_profile_list_text(
                     profile_value,
                     "target_roles",
                 ),
                 height="content",
-                help="Enter one role per line.",
+                help=_t(
+                    "profile.review.target_roles_help"
+                ),
                 key=profile_widget_key(
                     st.session_state,
                     "target_roles",
@@ -1019,13 +1298,17 @@ def _render_profile_review(
             )
 
             skills_text = st.text_area(
-                "Skills",
+                _t(
+                    "profile.review.skills"
+                ),
                 value=_profile_list_text(
                     profile_value,
                     "skills",
                 ),
                 height="content",
-                help="Enter one skill per line.",
+                help=_t(
+                    "profile.review.skills_help"
+                ),
                 key=profile_widget_key(
                     st.session_state,
                     "skills",
@@ -1034,12 +1317,16 @@ def _render_profile_review(
 
         with right_column:
             experience_level = st.text_input(
-                "Experience level",
+                _t(
+                    "profile.review.experience_level"
+                ),
                 value=_profile_text_value(
                     profile_value,
                     "experience_level",
                 ),
-                placeholder="Example: junior",
+                placeholder=_t(
+                    "profile.review.experience_placeholder"
+                ),
                 key=profile_widget_key(
                     st.session_state,
                     "experience_level",
@@ -1047,13 +1334,17 @@ def _render_profile_review(
             )
 
             preferred_locations_text = st.text_area(
-                "Preferred locations",
+                _t(
+                    "profile.review.locations"
+                ),
                 value=_profile_list_text(
                     profile_value,
                     "preferred_locations",
                 ),
                 height="content",
-                help="Enter one location per line.",
+                help=_t(
+                    "profile.review.locations_help"
+                ),
                 key=profile_widget_key(
                     st.session_state,
                     "preferred_locations",
@@ -1061,7 +1352,10 @@ def _render_profile_review(
             )
 
         st.markdown(
-            "#### Work preferences and constraints"
+            "#### "
+            + _t(
+                "profile.review.preferences_section"
+            )
         )
 
         left_column, right_column = st.columns(
@@ -1070,14 +1364,20 @@ def _render_profile_review(
 
         with left_column:
             preferred_work_types_text = st.text_area(
-                "Preferred work types",
+                _t(
+                    "profile.review.work_types"
+                ),
                 value=_profile_list_text(
                     profile_value,
                     "preferred_work_types",
                 ),
                 height="content",
-                placeholder="Example: hybrid",
-                help="Enter one work type per line.",
+                placeholder=_t(
+                    "profile.review.work_type_placeholder"
+                ),
+                help=_t(
+                    "profile.review.work_types_help"
+                ),
                 key=profile_widget_key(
                     st.session_state,
                     "preferred_work_types",
@@ -1085,13 +1385,17 @@ def _render_profile_review(
             )
 
             liked_areas_text = st.text_area(
-                "Areas you like",
+                _t(
+                    "profile.review.liked_areas"
+                ),
                 value=_profile_list_text(
                     profile_value,
                     "liked_areas",
                 ),
                 height="content",
-                help="Enter one area per line.",
+                help=_t(
+                    "profile.review.liked_areas_help"
+                ),
                 key=profile_widget_key(
                     st.session_state,
                     "liked_areas",
@@ -1100,13 +1404,17 @@ def _render_profile_review(
 
         with right_column:
             disliked_areas_text = st.text_area(
-                "Areas you want to avoid",
+                _t(
+                    "profile.review.disliked_areas"
+                ),
                 value=_profile_list_text(
                     profile_value,
                     "disliked_areas",
                 ),
                 height="content",
-                help="Enter one area per line.",
+                help=_t(
+                    "profile.review.disliked_areas_help"
+                ),
                 key=profile_widget_key(
                     st.session_state,
                     "disliked_areas",
@@ -1114,13 +1422,17 @@ def _render_profile_review(
             )
 
             hard_constraints_text = st.text_area(
-                "Non-negotiable requirements",
+                _t(
+                    "profile.review.constraints"
+                ),
                 value=_profile_list_text(
                     profile_value,
                     "hard_constraints",
                 ),
                 height="content",
-                help="Enter one requirement per line.",
+                help=_t(
+                    "profile.review.constraints_help"
+                ),
                 key=profile_widget_key(
                     st.session_state,
                     "hard_constraints",
@@ -1128,7 +1440,10 @@ def _render_profile_review(
             )
 
         st.markdown(
-            "#### Goals and notes"
+            "#### "
+            + _t(
+                "profile.review.goals_section"
+            )
         )
 
         left_column, right_column = st.columns(
@@ -1137,13 +1452,17 @@ def _render_profile_review(
 
         with left_column:
             career_goals_text = st.text_area(
-                "Career goals",
+                _t(
+                    "profile.review.goals"
+                ),
                 value=_profile_list_text(
                     profile_value,
                     "career_goals",
                 ),
                 height="content",
-                help="Enter one goal per line.",
+                help=_t(
+                    "profile.review.goals_help"
+                ),
                 key=profile_widget_key(
                     st.session_state,
                     "career_goals",
@@ -1152,13 +1471,17 @@ def _render_profile_review(
 
         with right_column:
             notes_text = st.text_area(
-                "Notes and uncertainties",
+                _t(
+                    "profile.review.notes"
+                ),
                 value=_profile_list_text(
                     profile_value,
                     "notes",
                 ),
                 height="content",
-                help="Enter one note per line.",
+                help=_t(
+                    "profile.review.notes_help"
+                ),
                 key=profile_widget_key(
                     st.session_state,
                     "notes",
@@ -1166,7 +1489,9 @@ def _render_profile_review(
             )
 
         confirmed = st.form_submit_button(
-            "Save and confirm profile",
+            _t(
+                "profile.review.confirm"
+            ),
             type="primary",
             width="stretch",
         )
@@ -1176,7 +1501,9 @@ def _render_profile_review(
 
         try:
             with st.spinner(
-                "Saving your reviewed profile..."
+                _t(
+                    "profile.review.saving"
+                )
             ):
                 result = service.confirm_profile(
                     profile=profile_value,
@@ -1230,12 +1557,18 @@ def _render_profile_review(
 
     if isinstance(current_profile, dict):
         with st.expander(
-            "View profile data"
+            _t(
+                "profile.review.view_data"
+            )
         ):
-            st.json(current_profile)
+            st.json(
+                current_profile
+            )
 
         st.download_button(
-            "Download profile data",
+            _t(
+                "profile.review.download_data"
+            ),
             data=(
                 json.dumps(
                     current_profile,
@@ -1294,31 +1627,31 @@ def _saved_search_setting(
 def _job_preview_rows(
     jobs: Sequence[Mapping[str, object]],
 ) -> list[dict[str, object]]:
-    """Build readable rows for the job-listing preview."""
+    """Build localized readable rows for the job-listing preview."""
     rows: list[dict[str, object]] = []
 
     for job in jobs:
         rows.append(
             {
-                "Title": (
+                _t("jobs.column.title"): (
                     job.get("title")
-                    or "Not provided"
+                    or _t("jobs.not_provided")
                 ),
-                "Company": (
+                _t("jobs.column.company"): (
                     job.get("company")
-                    or "Not provided"
+                    or _t("jobs.not_provided")
                 ),
-                "Location": (
+                _t("jobs.column.location"): (
                     job.get("location")
-                    or "Not provided"
+                    or _t("jobs.not_provided")
                 ),
-                "Work type": (
+                _t("jobs.column.work_type"): (
                     job.get("work_type")
-                    or "Not provided"
+                    or _t("jobs.not_provided")
                 ),
-                "Seniority": (
+                _t("jobs.column.seniority"): (
                     job.get("seniority")
-                    or "Not provided"
+                    or _t("jobs.not_provided")
                 ),
             }
         )
@@ -1327,7 +1660,7 @@ def _job_preview_rows(
 
 
 def _render_collected_jobs() -> None:
-    """Render a readable preview of the latest collected jobs."""
+    """Render a localized preview of the latest collected jobs."""
     jobs_value = st.session_state.get(
         COLLECTED_JOBS_KEY
     )
@@ -1336,17 +1669,22 @@ def _render_collected_jobs() -> None:
         return
 
     st.divider()
-    st.subheader("Job listings found")
+
+    st.subheader(
+        _t("jobs.title")
+    )
 
     if not jobs_value:
         st.warning(
-            "No job listings matched the current search. "
-            "Try changing the roles, location, or result limit."
+            _t("jobs.none")
         )
         return
 
     st.success(
-        f"{len(jobs_value)} unique job listings are ready."
+        _t(
+            "jobs.ready",
+            count=len(jobs_value),
+        )
     )
 
     preview_rows = _job_preview_rows(
@@ -1360,7 +1698,7 @@ def _render_collected_jobs() -> None:
     )
 
     st.download_button(
-        "Download job listings",
+        _t("jobs.download"),
         data=(
             json.dumps(
                 jobs_value,
@@ -1374,8 +1712,7 @@ def _render_collected_jobs() -> None:
     )
 
     st.info(
-        "Use the ranking section below to compare and explain "
-        "these jobs."
+        _t("jobs.ranking_hint")
     )
 
 
@@ -1385,7 +1722,7 @@ def _render_job_search(
     search_available: bool,
     capabilities: CapabilityStatus,
 ) -> None:
-    """Render job-search configuration and collection."""
+    """Render localized job-search configuration and collection."""
     if (
         st.session_state.get(
             PROFILE_CONFIRMED_KEY
@@ -1415,24 +1752,26 @@ def _render_job_search(
         return
 
     st.divider()
+
     st.subheader(
-        "Configure your job search"
+        _t("job.search.title")
     )
 
     st.success(
-        "Your career profile has been saved and confirmed."
+        _t(
+            "job.search.profile_confirmed"
+        )
     )
 
     if not capabilities.job_collection_available:
         st.warning(
-            "Live job search is not currently available for this "
-            "application. Your confirmed career profile will remain "
-            "available."
+            _t(
+                "job.search.unavailable"
+            )
         )
 
     st.write(
-        "Review the roles and search settings below, then start the job "
-        "search. Each role is searched separately."
+        _t("job.search.intro")
     )
 
     default_roles = _saved_search_setting(
@@ -1454,7 +1793,9 @@ def _render_job_search(
         ]
 
     default_roles_text = "\n".join(
-        default_role_values[:MAX_JOB_QUERIES]
+        default_role_values[
+            :MAX_JOB_QUERIES
+        ]
     )
 
     default_location = _saved_search_setting(
@@ -1476,8 +1817,14 @@ def _render_job_search(
     )
 
     if (
-        not isinstance(default_max_results, int)
-        or isinstance(default_max_results, bool)
+        not isinstance(
+            default_max_results,
+            int,
+        )
+        or isinstance(
+            default_max_results,
+            bool,
+        )
         or not 1
         <= default_max_results
         <= MAX_JOB_RESULTS_PER_QUERY
@@ -1487,14 +1834,16 @@ def _render_job_search(
             MAX_JOB_RESULTS_PER_QUERY,
         )
 
-    with st.form("job_search_form"):
+    with st.form(
+        "job_search_form"
+    ):
         roles_text = st.text_area(
-            "Roles to search for",
+            _t("job.search.roles"),
             value=default_roles_text,
             height="content",
-            help=(
-                f"Enter up to {MAX_JOB_QUERIES} roles, "
-                "one role per line."
+            help=_t(
+                "job.search.roles_help",
+                max_roles=MAX_JOB_QUERIES,
             ),
             key=job_search_widget_key(
                 st.session_state,
@@ -1503,19 +1852,30 @@ def _render_job_search(
         )
 
         st.caption(
-            f"You can search up to {MAX_JOB_QUERIES} roles at a time."
+            _t(
+                "job.search.roles_caption",
+                max_roles=MAX_JOB_QUERIES,
+            )
         )
 
-        location_column, limit_column, source_column = st.columns(
+        (
+            location_column,
+            limit_column,
+            source_column,
+        ) = st.columns(
             3,
             gap="medium",
         )
 
         with location_column:
             location = st.text_input(
-                "Search location (optional)",
+                _t(
+                    "job.search.location"
+                ),
                 value=default_location,
-                placeholder="Example: Adelaide",
+                placeholder=_t(
+                    "job.search.location_placeholder"
+                ),
                 key=job_search_widget_key(
                     st.session_state,
                     "location",
@@ -1523,26 +1883,35 @@ def _render_job_search(
             )
 
         with limit_column:
-            max_results_per_role = st.number_input(
-                "Maximum listings per role",
-                min_value=1,
-                max_value=MAX_JOB_RESULTS_PER_QUERY,
-                value=default_max_results,
-                step=1,
-                help=(
-                    "This limit applies separately to each role before "
-                    "duplicate listings are removed. "
-                    f"Maximum {MAX_JOB_RESULTS_PER_QUERY} listings per role."
-                ),
-                key=job_search_widget_key(
-                    st.session_state,
-                    "max_results",
-                ),
+            max_results_per_role = (
+                st.number_input(
+                    _t(
+                        "job.search.max_results"
+                    ),
+                    min_value=1,
+                    max_value=(
+                        MAX_JOB_RESULTS_PER_QUERY
+                    ),
+                    value=default_max_results,
+                    step=1,
+                    help=_t(
+                        "job.search.max_results_help",
+                        max_results=(
+                            MAX_JOB_RESULTS_PER_QUERY
+                        ),
+                    ),
+                    key=job_search_widget_key(
+                        st.session_state,
+                        "max_results",
+                    ),
+                )
             )
 
         with source_column:
             source = st.selectbox(
-                "Job listing provider",
+                _t(
+                    "job.search.provider"
+                ),
                 options=(
                     "adzuna",
                 ),
@@ -1556,35 +1925,47 @@ def _render_job_search(
             )
 
             st.caption(
-                "The first web MVP currently searches Adzuna. "
-                "Additional providers can be added later."
+                _t(
+                    "job.search.provider_caption"
+                )
             )
 
-        search_submitted = st.form_submit_button(
-            "Search for jobs",
-            type="primary",
-            disabled=(
-                not search_available
-                or not capabilities.job_collection_available
-            ),
-            width="stretch",
+        search_submitted = (
+            st.form_submit_button(
+                _t(
+                    "job.search.submit"
+                ),
+                type="primary",
+                disabled=(
+                    not search_available
+                    or not capabilities.job_collection_available
+                ),
+                width="stretch",
+            )
         )
 
     if search_submitted:
-        workspace = _get_or_create_workspace()
+        workspace = (
+            _get_or_create_workspace()
+        )
 
         try:
             with st.status(
-                "Searching for job listings...",
+                _t(
+                    "job.search.searching"
+                ),
                 expanded=True,
             ) as status:
                 st.write(
-                    "Searching each role using your confirmed location "
-                    "and result limit."
+                    _t(
+                        "job.search.searching_detail"
+                    )
                 )
 
                 result = service.search_jobs(
-                    roles=roles_text.splitlines(),
+                    roles=(
+                        roles_text.splitlines()
+                    ),
                     location=location,
                     max_results_per_role=int(
                         max_results_per_role
@@ -1594,7 +1975,9 @@ def _render_job_search(
                 )
 
                 st.write(
-                    "Combining the results and removing duplicate listings."
+                    _t(
+                        "job.search.deduplicating"
+                    )
                 )
 
                 record_job_search(
@@ -1606,9 +1989,11 @@ def _render_job_search(
                 )
 
                 status.update(
-                    label=(
-                        "Job search complete: "
-                        f"{len(result.jobs)} unique listings found."
+                    label=_t(
+                        "job.search.complete",
+                        count=len(
+                            result.jobs
+                        ),
                     ),
                     state="complete",
                     expanded=False,
@@ -1637,11 +2022,14 @@ def main() -> None:
             "Unable to initialize authentication."
         )
 
-        st.title("CareerVoice AI")
+        st.title(
+            _t("app.title")
+        )
 
         st.error(
-            "Sign-in is temporarily unavailable. "
-            "Please contact the application administrator."
+            _t(
+                "login.initialization_unavailable"
+            )
         )
         return
 
@@ -1663,16 +2051,18 @@ def main() -> None:
 
     if app_user is None:
         st.error(
-            "Your session could not be verified. "
-            "Please sign in again."
+            _t(
+                "session.invalid"
+            )
         )
         return
 
-    st.title("CareerVoice AI")
+    st.title(
+        _t("app.title")
+    )
 
     st.write(
-        "Turn your career preferences into structured, explainable "
-        "job recommendations."
+        _t("app.tagline")
     )
 
     ai_usage_budget = build_ai_usage_budget(
@@ -1684,6 +2074,11 @@ def main() -> None:
         Repo4OrchestratorGateway(),
         voice_transcriber=Repo1VoiceTranscriber(),
         ai_usage_budget=ai_usage_budget,
+        output_language=(
+            get_app_language(
+                st.session_state
+            ).value
+        ),
     )
 
     missing_commands = (

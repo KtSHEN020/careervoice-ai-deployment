@@ -3,6 +3,11 @@ from __future__ import annotations
 from collections.abc import Mapping, MutableMapping, Sequence
 from copy import deepcopy
 
+from careervoice_ai_web_app.i18n import (
+    LANGUAGE_STATE_KEY,
+    parse_app_language,
+)
+
 WORKSPACE_SESSION_ID_KEY = "workspace_session_id"
 AUTHENTICATED_APP_USER_KEY = "authenticated_app_user"
 AUTHENTICATION_SESSION_KEY = "authentication_session"
@@ -30,8 +35,19 @@ RECOMMENDATIONS_KEY = "recommendations"
 def clear_user_session_state(
     state: MutableMapping[str, object],
 ) -> None:
-    """Remove all browser-session data when the current user signs out."""
+    """Remove private user data while preserving UI language."""
+    language = parse_app_language(
+        state.get(
+            LANGUAGE_STATE_KEY
+        )
+    )
+
     state.clear()
+
+    if language is not None:
+        state[
+            LANGUAGE_STATE_KEY
+        ] = language.value
 
 
 def clear_login_form_state(

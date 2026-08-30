@@ -95,8 +95,13 @@ def test_cli_uses_llm_extractor_when_selected(
     transcript_file = create_sample_transcript_file(tmp_path)
     received_values = {}
 
-    def fake_llm_extractor(text: str) -> CareerProfile:
+    def fake_llm_extractor(
+        text: str,
+        *,
+        output_language: str = "en",
+    ) -> CareerProfile:
         received_values["text"] = text
+        received_values["output_language"] = output_language
 
         return CareerProfile(
             target_roles=["junior backend developer"],
@@ -133,6 +138,7 @@ def test_cli_uses_llm_extractor_when_selected(
     assert "junior software developer" in received_values["text"]
     assert parsed_json["target_roles"] == ["junior backend developer"]
     assert parsed_json["preferred_work_types"] == ["hybrid"]
+    assert received_values["output_language"] == "en"
 
 
 def test_cli_text_mode_rejects_empty_input(monkeypatch):
@@ -214,8 +220,13 @@ def test_cli_voice_mode_supports_llm_extractor_and_output_file(
 
         return "I recently graduated and want to work with backend systems."
 
-    def fake_llm_extractor(text: str) -> CareerProfile:
+    def fake_llm_extractor(
+        text: str,
+        *,
+        output_language: str = "en",
+    ) -> CareerProfile:
         received_values["text"] = text
+        received_values["output_language"] = output_language
 
         return CareerProfile(
             target_roles=["junior backend developer"],
@@ -267,3 +278,78 @@ def test_cli_voice_mode_supports_llm_extractor_and_output_file(
     )
     assert parsed_json["target_roles"] == ["junior backend developer"]
     assert parsed_json["career_goals"] == ["build backend engineering experience"]
+
+
+def test_cli_passes_simplified_chinese_to_llm_extractor(
+    tmp_path: Path,
+    monkeypatch,
+    capsys,
+):
+    transcript_file = create_sample_transcript_file(
+        tmp_path
+    )
+
+    received_values = {}
+
+    def fake_llm_extractor(
+        text: str,
+        *,
+        output_language: str = "en",
+    ) -> CareerProfile:
+        received_values["text"] = text
+        received_values[
+            "output_language"
+        ] = output_language
+
+        return CareerProfile(
+            target_roles=[
+                "junior software developer",
+            ],
+            skills=[
+                "Python",
+            ],
+            experience_level="junior",
+            preferred_locations=[
+                "Adelaide",
+            ],
+            preferred_work_types=[
+                "hybrid",
+            ],
+            liked_areas=[
+                "后端开发",
+            ],
+            disliked_areas=[],
+            hard_constraints=[],
+            career_goals=[
+                "积累软件工程经验",
+            ],
+            notes=[],
+        )
+
+    monkeypatch.setattr(
+        cli,
+        "extract_career_profile_with_llm",
+        fake_llm_extractor,
+    )
+
+    exit_code = cli.main(
+        [
+            "file",
+            str(transcript_file),
+            "--extractor",
+            "llm",
+            "--output-language",
+            "zh-CN",
+        ]
+    )
+
+    capsys.readouterr()
+
+    assert exit_code == 0
+
+    assert (
+        received_values[
+            "output_language"
+        ]
+        == "zh-CN"
+    )

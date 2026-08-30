@@ -40,6 +40,7 @@ def test_recommend_jobs_defaults_to_llm_scorer(monkeypatch) -> None:
         *,
         client: Any = None,
         model: str = recommender.DEFAULT_LLM_MODEL,
+        output_language: str = "en",
     ) -> dict[str, Any]:
         calls.append(
             {
@@ -47,6 +48,7 @@ def test_recommend_jobs_defaults_to_llm_scorer(monkeypatch) -> None:
                 "job_id": job["job_id"],
                 "client": client,
                 "model": model,
+                "output_language": output_language,
             }
         )
         return _build_fake_recommendation(
@@ -89,6 +91,10 @@ def test_recommend_jobs_defaults_to_llm_scorer(monkeypatch) -> None:
         result["llm_candidate_limit"]
         == recommender.MAX_LLM_JOBS_PER_RUN
     )
+    assert (
+        calls[0]["output_language"]
+        == "en"
+    )
 
 
 def test_recommend_jobs_can_use_rules_scorer(monkeypatch) -> None:
@@ -97,6 +103,8 @@ def test_recommend_jobs_can_use_rules_scorer(monkeypatch) -> None:
     def fake_score_job(
         profile: dict[str, Any],
         job: dict[str, Any],
+        *,
+        output_language: str = "en",
     ) -> dict[str, Any]:
         calls.append(
             {
@@ -154,6 +162,7 @@ def test_recommend_jobs_can_filter_rejected_llm_results(
         *,
         client: Any = None,
         model: str = recommender.DEFAULT_LLM_MODEL,
+        output_language: str = "en",
     ) -> dict[str, Any]:
         return _build_fake_recommendation(
             job,
@@ -205,6 +214,8 @@ def test_llm_scoring_is_limited_to_top_rule_candidates(
     def fake_score_job(
         profile: dict[str, Any],
         job: dict[str, Any],
+        *,
+        output_language: str = "en",
     ) -> dict[str, Any]:
         rule_calls.append(job["job_id"])
 
@@ -220,6 +231,7 @@ def test_llm_scoring_is_limited_to_top_rule_candidates(
         *,
         client: Any = None,
         model: str = recommender.DEFAULT_LLM_MODEL,
+        output_language: str = "en",
     ) -> dict[str, Any]:
         llm_calls.append(job["job_id"])
 
@@ -293,6 +305,8 @@ def test_rules_scoring_does_not_use_llm_candidate_limit(
     def fake_score_job(
         profile: dict[str, Any],
         job: dict[str, Any],
+        *,
+        output_language: str = "en",
     ) -> dict[str, Any]:
         rule_calls.append(job["job_id"])
 
@@ -327,3 +341,99 @@ def test_rules_scoring_does_not_use_llm_candidate_limit(
     assert result["total_jobs_scored"] == 15
     assert result["total_jobs_scored_with_llm"] == 0
     assert result["llm_candidate_limit"] is None
+
+
+def test_recommend_jobs_forwards_simplified_chinese_to_llm(
+    monkeypatch,
+) -> None:
+    received_languages = []
+
+    def fake_score_job_with_llm(
+        profile: dict[str, Any],
+        job: dict[str, Any],
+        *,
+        client: Any = None,
+        model: str = recommender.DEFAULT_LLM_MODEL,
+        output_language: str = "en",
+    ) -> dict[str, Any]:
+        received_languages.append(
+            output_language
+        )
+
+        return _build_fake_recommendation(
+            job,
+            score=80,
+            scoring_method="llm",
+        )
+
+    monkeypatch.setattr(
+        recommender,
+        "score_job_with_llm",
+        fake_score_job_with_llm,
+    )
+
+    recommend_jobs(
+        profile={
+            "skills": [
+                "Python",
+            ],
+        },
+        jobs=[
+            {
+                "job_id": "job_001",
+            },
+        ],
+        scorer="llm",
+        output_language="zh-CN",
+    )
+
+    assert received_languages == [
+        "zh-CN",
+    ]
+
+
+def test_recommend_jobs_forwards_simplified_chinese_to_rules(
+    monkeypatch,
+) -> None:
+    received_languages = []
+
+    def fake_score_job(
+        profile: dict[str, Any],
+        job: dict[str, Any],
+        *,
+        output_language: str = "en",
+    ) -> dict[str, Any]:
+        received_languages.append(
+            output_language
+        )
+
+        return _build_fake_recommendation(
+            job,
+            score=80,
+            scoring_method="rules",
+        )
+
+    monkeypatch.setattr(
+        recommender,
+        "score_job",
+        fake_score_job,
+    )
+
+    recommend_jobs(
+        profile={
+            "skills": [
+                "Python",
+            ],
+        },
+        jobs=[
+            {
+                "job_id": "job_001",
+            },
+        ],
+        scorer="rules",
+        output_language="zh-CN",
+    )
+
+    assert received_languages == [
+        "zh-CN",
+    ]

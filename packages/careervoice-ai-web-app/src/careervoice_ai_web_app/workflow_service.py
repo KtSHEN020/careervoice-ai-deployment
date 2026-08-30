@@ -4,7 +4,10 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Protocol
 
-from careervoice_ai_orchestrator.models import WorkflowConfig
+from careervoice_ai_orchestrator.models import (
+    SUPPORTED_OUTPUT_LANGUAGES,
+    WorkflowConfig,
+)
 
 from careervoice_ai_web_app.ai_usage import (
     AI_RANKING_AI_UNITS,
@@ -114,11 +117,33 @@ class CareerVoiceWorkflowService:
         document_recognizer: SupportsDocumentRecognizer | None = None,
         voice_transcriber: SupportsVoiceTranscriber | None = None,
         ai_usage_budget: SupportsAIUsageBudget | None = None,
+        output_language: str = "en",
     ) -> None:
+        normalized_output_language = (
+            output_language.strip()
+            if isinstance(
+                output_language,
+                str,
+            )
+            else ""
+        )
+
+        if (
+            normalized_output_language
+            not in SUPPORTED_OUTPUT_LANGUAGES
+        ):
+            raise ValueError(
+                "Unsupported output language. "
+                "Choose 'en' or 'zh-CN'."
+            )
+
         self.gateway = gateway
         self._document_recognizer = document_recognizer
         self._voice_transcriber = voice_transcriber
         self._ai_usage_budget = ai_usage_budget
+        self._output_language = (
+            normalized_output_language
+        )
 
     def _reserve_ai_usage(
         self,
@@ -500,8 +525,8 @@ class CareerVoiceWorkflowService:
             missing_ok=True
         )
 
-    @staticmethod
     def _build_config(
+        self,
         *,
         workspace: SessionWorkspace,
         input_mode: str,
@@ -523,6 +548,7 @@ class CareerVoiceWorkflowService:
                 workspace.recommendations_output_path
             ),
             profile_extractor=profile_extractor,
+            output_language=self._output_language,
             job_source=job_source,
             job_queries=job_queries,
             job_location=job_location,

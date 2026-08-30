@@ -16,6 +16,7 @@ from careervoice_ai_orchestrator.models import (
     SUPPORTED_JOB_SOURCES,
     SUPPORTED_PROFILE_EXTRACTORS,
     SUPPORTED_RECOMMENDER_SCORERS,
+    SUPPORTED_OUTPUT_LANGUAGES,
     WorkflowConfig,
 )
 from careervoice_ai_orchestrator.workflow import run_workflow
@@ -70,6 +71,16 @@ def build_parser() -> argparse.ArgumentParser:
         choices=SUPPORTED_PROFILE_EXTRACTORS,
         default="rules",
         help="Profile extractor used by Repo 1.",
+    )
+
+    parser.add_argument(
+        "--output-language",
+        choices=SUPPORTED_OUTPUT_LANGUAGES,
+        default="en",
+        help=(
+            "Language for AI-generated human-readable output. "
+            "Supported values: en, zh-CN."
+        ),
     )
 
     parser.add_argument(
@@ -170,6 +181,7 @@ def build_config_from_args(args: argparse.Namespace) -> WorkflowConfig:
         jobs_output_path=Path(args.jobs_output),
         recommendations_output_path=Path(args.recommendations_output),
         profile_extractor=args.profile_extractor,
+        output_language=args.output_language,
         job_source=args.source,
         job_queries=tuple(args.queries or ()),
         job_location=location or None,

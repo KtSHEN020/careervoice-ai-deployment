@@ -97,6 +97,7 @@ def test_build_config_from_default_cli_args() -> None:
     assert config.input_mode == "profile"
     assert config.profile_input_path == Path("outputs/profile_input.txt")
     assert config.profile_extractor == "rules"
+    assert config.output_language == "en"
 
 
 def test_build_config_from_custom_cli_args(tmp_path: Path) -> None:
@@ -135,6 +136,8 @@ def test_build_config_from_custom_cli_args(tmp_path: Path) -> None:
             "--scorer",
             "rules",
             "--exclude-rejected",
+            "--output-language",
+            "zh-CN",
         ]
     )
 
@@ -156,6 +159,10 @@ def test_build_config_from_custom_cli_args(tmp_path: Path) -> None:
     assert config.input_mode == "profile"
     assert config.profile_input_path == profile_input_path
     assert config.profile_extractor == "rules"
+    assert (
+        config.output_language
+        == "zh-CN"
+    )
 
 
 def test_build_config_treats_empty_location_as_none() -> None:

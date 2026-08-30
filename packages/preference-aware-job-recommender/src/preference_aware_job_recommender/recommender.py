@@ -4,6 +4,7 @@ from typing import Any, Literal
 
 from preference_aware_job_recommender.llm_scorer import (
     DEFAULT_LLM_MODEL,
+    SUPPORTED_OUTPUT_LANGUAGES,
     OpenAIClient,
     score_job_with_llm,
 )
@@ -22,6 +23,26 @@ def _validate_scorer(scorer: str) -> None:
     """
     if scorer not in VALID_SCORERS:
         raise ValueError("scorer must be one of: rules, llm.")
+
+
+def _validate_output_language(
+    output_language: str,
+) -> None:
+    """
+    Validate the selected LLM output language.
+    """
+    if (
+        output_language
+        not in SUPPORTED_OUTPUT_LANGUAGES
+    ):
+        supported = ", ".join(
+            SUPPORTED_OUTPUT_LANGUAGES
+        )
+
+        raise ValueError(
+            "output_language must be one of: "
+            f"{supported}."
+        )
 
 
 def _add_scoring_method(
@@ -105,21 +126,37 @@ def _score_job_with_selected_scorer(
     scorer: ScoringMethod,
     llm_client: OpenAIClient | None,
     llm_model: str,
+    output_language: str,
 ) -> dict[str, Any]:
     """
     Score one job using the selected scoring method.
     """
     if scorer == "rules":
-        recommendation = score_job(profile, job)
-        return _add_scoring_method(recommendation, "rules")
+        recommendation = score_job(
+            profile,
+            job,
+            output_language=(
+                output_language
+            ),
+        )
+
+        return _add_scoring_method(
+            recommendation,
+            "rules",
+        )
 
     recommendation = score_job_with_llm(
         profile=profile,
         job=job,
         client=llm_client,
         model=llm_model,
+        output_language=output_language,
     )
-    return _add_scoring_method(recommendation, "llm")
+
+    return _add_scoring_method(
+        recommendation,
+        "llm",
+    )
 
 
 def recommend_jobs(
@@ -130,6 +167,7 @@ def recommend_jobs(
     scorer: ScoringMethod = "llm",
     llm_client: OpenAIClient | None = None,
     llm_model: str = DEFAULT_LLM_MODEL,
+    output_language: str = "en",
 ) -> dict[str, Any]:
     """
     Return ranked job recommendations for a career profile.
@@ -138,6 +176,9 @@ def recommend_jobs(
     at most MAX_LLM_JOBS_PER_RUN candidates.
     """
     _validate_scorer(scorer)
+    _validate_output_language(
+        output_language
+    )
 
     if max_results is not None and max_results < 0:
         raise ValueError("max_results must be greater than or equal to 0.")
@@ -157,6 +198,7 @@ def recommend_jobs(
             scorer=scorer,
             llm_client=llm_client,
             llm_model=llm_model,
+            output_language=output_language,
         )
         for job in jobs_to_score
     ]

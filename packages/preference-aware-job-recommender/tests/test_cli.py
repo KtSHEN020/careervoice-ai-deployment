@@ -15,6 +15,7 @@ def test_build_parser_defaults_to_llm_scorer() -> None:
     args = parser.parse_args([])
 
     assert args.scorer == "llm"
+    assert args.output_language == "en"
 
 
 def test_format_recommendations_includes_key_fields() -> None:
@@ -189,6 +190,8 @@ def test_cli_main_passes_llm_options_to_recommender(monkeypatch, capsys) -> None
             "llm",
             "--llm-model",
             "fake-model",
+            "--output-language",
+            "zh-CN",
         ]
     )
 
@@ -197,4 +200,10 @@ def test_cli_main_passes_llm_options_to_recommender(monkeypatch, capsys) -> None
     assert exit_code == 0
     assert received_arguments["scorer"] == "llm"
     assert received_arguments["llm_model"] == "fake-model"
+    assert (
+        received_arguments[
+            "output_language"
+        ]
+        == "zh-CN"
+    )
     assert "Scoring method: llm" in captured.out

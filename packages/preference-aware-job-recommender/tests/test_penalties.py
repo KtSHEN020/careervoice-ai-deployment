@@ -105,3 +105,74 @@ def test_score_job_caps_score_when_hard_constraint_conflicts() -> None:
     assert result["match_score"] <= 25
     assert result["recommendation_level"] == "poor_match"
     assert "Conflicts with hard constraint: avoid senior roles" in result["penalties"]
+
+
+def test_score_job_localizes_penalties_in_simplified_chinese() -> None:
+    profile = {
+        "target_roles": [
+            "backend developer",
+        ],
+        "skills": [
+            "Python",
+        ],
+        "experience_level": "junior",
+        "preferred_locations": [
+            "Remote",
+        ],
+        "preferred_work_types": [
+            "remote",
+        ],
+        "liked_areas": [],
+        "disliked_areas": [
+            "sales",
+        ],
+        "hard_constraints": [
+            "avoid sales roles",
+        ],
+        "career_goals": [],
+    }
+
+    job = {
+        "job_id": "job_sales_zh",
+        "title": "Technical Sales Consultant",
+        "company": "Example Sales Group",
+        "location": "Remote",
+        "work_type": "remote",
+        "seniority": "junior",
+        "description": (
+            "Support sales conversations."
+        ),
+        "required_skills": [
+            "Python",
+        ],
+        "preferred_skills": [],
+        "responsibilities": [
+            "Join sales calls",
+        ],
+        "tags": [
+            "sales",
+        ],
+    }
+
+    result = score_job(
+        profile,
+        job,
+        output_language="zh-CN",
+    )
+
+    assert (
+        "包含不喜欢的领域：sales"
+        in result["penalties"]
+    )
+
+    assert (
+        "与不可妥协要求冲突：avoid sales roles"
+        in result["penalties"]
+    )
+
+    assert (
+        result[
+            "is_rejected_by_constraints"
+        ]
+        is True
+    )

@@ -2,6 +2,7 @@ from preference_aware_job_recommender.scoring import (
     get_recommendation_level,
     score_job,
 )
+import pytest
 
 
 def test_get_recommendation_level() -> None:
@@ -114,3 +115,110 @@ def test_score_job_can_match_career_goal_keywords() -> None:
     assert result["score_breakdown"]["liked_area_match"] == 5
     assert result["score_breakdown"]["location_match"] == 10
     assert result["score_breakdown"]["work_type_match"] == 10
+
+
+def test_score_job_localizes_reasons_in_simplified_chinese() -> None:
+    profile = {
+        "target_roles": [
+            "backend developer",
+        ],
+        "skills": [
+            "Python",
+            "SQL",
+            "Git",
+        ],
+        "experience_level": "junior",
+        "preferred_locations": [
+            "Adelaide",
+        ],
+        "preferred_work_types": [
+            "remote",
+        ],
+        "liked_areas": [
+            "backend development",
+        ],
+        "disliked_areas": [],
+        "hard_constraints": [],
+        "career_goals": [
+            "move toward software engineering",
+        ],
+    }
+
+    job = {
+        "job_id": "job_zh",
+        "title": "Junior Backend Developer",
+        "company": "Example Tech",
+        "location": "Adelaide",
+        "work_type": "remote",
+        "seniority": "junior",
+        "description": (
+            "Build backend services for "
+            "software engineering teams."
+        ),
+        "required_skills": [
+            "Python",
+            "SQL",
+            "Git",
+        ],
+        "preferred_skills": [],
+        "responsibilities": [
+            "Develop backend features",
+        ],
+        "tags": [
+            "backend development",
+            "software engineering",
+        ],
+    }
+
+    result = score_job(
+        profile,
+        job,
+        output_language="zh-CN",
+    )
+
+    assert (
+        "匹配技能：Python, SQL, Git"
+        in result["reasons"]
+    )
+
+    assert (
+        "匹配目标岗位：backend developer"
+        in result["reasons"]
+    )
+
+    assert (
+        "匹配经验水平：junior"
+        in result["reasons"]
+    )
+
+    assert (
+        "匹配偏好地区：Adelaide"
+        in result["reasons"]
+    )
+
+    assert (
+        "匹配偏好工作方式：remote"
+        in result["reasons"]
+    )
+
+    assert (
+        "匹配感兴趣领域：backend development"
+        in result["reasons"]
+    )
+
+    assert (
+        "支持职业目标：move toward software engineering"
+        in result["reasons"]
+    )
+
+
+def test_score_job_rejects_unknown_output_language() -> None:
+    with pytest.raises(
+        ValueError,
+        match="output_language must be one of",
+    ):
+        score_job(
+            {},
+            {},
+            output_language="fr",
+        )

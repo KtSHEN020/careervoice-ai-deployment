@@ -1,45 +1,101 @@
-# CareerVoice AI Deployment
+# CareerVoice AI Deployment Packages
 
-This repository assembles the complete CareerVoice AI application for cloud deployment.
+This directory contains the package snapshots used by the CareerVoice AI deployment repository.
 
-The original CareerVoice AI repositories remain separate development and portfolio repositories. This deployment repository contains clean, tested package snapshots required to run the complete application in one hosted environment.
+Each package originated as a separate CareerVoice AI development/portfolio repository. They are assembled here so the complete application can be installed, tested, and deployed from one repository.
 
-## Intended deployment
+## Packages
 
-The initial deployment target is Streamlit Community Cloud.
+### `voice-career-profile-extractor`
 
-The first release will be used as a private supervisor demonstration.
+Provides:
 
-## Components
+- text-based career input
+- voice transcription integration
+- Standard career-profile extraction
+- AI-assisted career-profile extraction
+- structured `career_profile.json` output
+- English and Simplified Chinese AI output control
 
-The deployed application will include:
+### `preference-aware-job-recommender`
 
-- career-profile extraction;
-- voice and document processing;
-- current job collection;
-- preference-aware job recommendations;
-- workflow coordination;
-- the Streamlit web interface.
+Provides:
 
-## Repository role
+- Standard job scoring
+- AI-assisted semantic scoring
+- hard-constraint handling
+- recommendation explanations
+- missing skills, penalties, and uncertainties
+- English and Simplified Chinese recommendation explanations
 
-This repository is an assembly and hosting repository.
+### `job-listing-collector`
 
-Feature development and bug fixes should normally be completed in the relevant original repository first. Approved versions are then synchronized into this deployment repository.
+Provides:
 
-## Security
+- Adzuna job collection
+- normalization
+- multi-query collection
+- deduplication
+- structured `jobs.json` output
 
-Never commit:
+### `careervoice-ai-orchestrator`
 
-- `.env`;
-- `.streamlit/secrets.toml`;
-- API keys;
-- virtual environments;
-- runtime user files;
-- generated outputs;
-- caches;
-- local IDE files.
+Coordinates:
 
-## Current status
+```text
+career information
+  -> career profile
+  -> job collection
+  -> recommendations
+```
 
-Step 15B: initial deployment repository skeleton.
+It also passes user-selected output language settings to the profile extractor and recommender.
+
+### `careervoice-ai-web-app`
+
+Provides the user-facing Streamlit application, including:
+
+- approved-user OTP login
+- CareerVoice authorization
+- bilingual UI
+- quota display and enforcement
+- text, document, and browser voice input
+- profile review/editing
+- job-search configuration
+- recommendation display
+- downloadable structured results
+
+## Deployment-package policy
+
+These directories are deployment snapshots, not independent virtual environments.
+
+Do not copy the following into package directories:
+
+- `.env`
+- `.streamlit/secrets.toml`
+- API keys or passwords
+- `.git` histories
+- `.venv`
+- runtime user data
+- generated outputs
+- build artifacts
+- caches
+
+## Development checks
+
+From the deployment repository root:
+
+```bash
+uv sync
+uv run pytest -q
+uv run ruff check .
+git diff --check
+```
+
+Because the deployment repository installs local package snapshots into `.venv`, package changes may require a refresh such as:
+
+```bash
+uv sync --reinstall-package <package-name>
+```
+
+before running integration tests.

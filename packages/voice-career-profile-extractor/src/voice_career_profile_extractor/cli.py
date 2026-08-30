@@ -15,6 +15,7 @@ from voice_career_profile_extractor.exporters import (
 )
 from voice_career_profile_extractor.extractor import extract_career_profile
 from voice_career_profile_extractor.llm_extractor import (
+    SUPPORTED_OUTPUT_LANGUAGES,
     extract_career_profile_with_llm,
 )
 from voice_career_profile_extractor.models import CareerProfile
@@ -73,6 +74,16 @@ def _add_shared_arguments(parser: argparse.ArgumentParser) -> None:
     )
 
     parser.add_argument(
+        "--output-language",
+        choices=SUPPORTED_OUTPUT_LANGUAGES,
+        default="en",
+        help=(
+            "Language for AI-generated human-readable profile values. "
+            "Supported values: en, zh-CN. Defaults to en."
+        ),
+    )
+
+    parser.add_argument(
         "-o",
         "--output",
         type=Path,
@@ -113,9 +124,16 @@ def _record_and_transcribe_voice() -> str:
         return transcribe_audio_file(recording_path)
 
 
-def _extract_profile(text: str, extractor: str) -> CareerProfile:
+def _extract_profile(
+    text: str,
+    extractor: str,
+    output_language: str,
+) -> CareerProfile:
     if extractor == "llm":
-        return extract_career_profile_with_llm(text)
+        return extract_career_profile_with_llm(
+            text,
+            output_language=output_language,
+        )
 
     return extract_career_profile(text)
 
@@ -139,7 +157,11 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     text = _load_input_text(args)
-    profile = _extract_profile(text, args.extractor)
+    profile = _extract_profile(
+        text,
+        args.extractor,
+        args.output_language,
+    )
     _output_profile(profile, args.output)
 
     return 0

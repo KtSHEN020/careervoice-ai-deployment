@@ -22,6 +22,64 @@ STOP_WORDS = {
 }
 
 
+SUPPORTED_OUTPUT_LANGUAGES = (
+    "en",
+    "zh-CN",
+)
+
+RULE_EXPLANATION_TEMPLATES = {
+    "en": {
+        "matched_skills": "Matches skills: {value}",
+        "matched_target_role": "Matches target role: {value}",
+        "matched_experience": "Matches experience level: {value}",
+        "matched_location": "Matches preferred location: {value}",
+        "matched_work_type": "Matches preferred work type: {value}",
+        "matched_liked_area": "Matches liked area: {value}",
+        "matched_career_goal": "Supports career goal: {value}",
+        "disliked_area": "Contains disliked area: {value}",
+        "hard_constraint": "Conflicts with hard constraint: {value}",
+    },
+    "zh-CN": {
+        "matched_skills": "匹配技能：{value}",
+        "matched_target_role": "匹配目标岗位：{value}",
+        "matched_experience": "匹配经验水平：{value}",
+        "matched_location": "匹配偏好地区：{value}",
+        "matched_work_type": "匹配偏好工作方式：{value}",
+        "matched_liked_area": "匹配感兴趣领域：{value}",
+        "matched_career_goal": "支持职业目标：{value}",
+        "disliked_area": "包含不喜欢的领域：{value}",
+        "hard_constraint": "与不可妥协要求冲突：{value}",
+    },
+}
+
+
+def _normalize_output_language(
+    output_language: str,
+) -> str:
+    """Validate the requested rule-based explanation language."""
+    if not isinstance(
+        output_language,
+        str,
+    ):
+        raise ValueError(
+            "output_language must be one of: en, zh-CN."
+        )
+
+    cleaned_language = (
+        output_language.strip()
+    )
+
+    if (
+        cleaned_language
+        not in SUPPORTED_OUTPUT_LANGUAGES
+    ):
+        raise ValueError(
+            "output_language must be one of: en, zh-CN."
+        )
+
+    return cleaned_language
+
+
 def normalize_text(value: str) -> str:
     """
     Normalize text for simple case-insensitive matching.
@@ -263,34 +321,92 @@ def _build_positive_reasons(
     job_work_type: str,
     matched_liked_areas: list[str],
     matched_career_goals: list[str],
+    *,
+    output_language: str,
 ) -> list[str]:
     """
-    Build explanation reasons for positive matching factors.
+    Build localized explanation reasons for positive matching factors.
     """
+    templates = (
+        RULE_EXPLANATION_TEMPLATES[
+            output_language
+        ]
+    )
+
     reasons = []
 
     if skill_result["matched_skills"]:
         reasons.append(
-            "Matches skills: " + ", ".join(skill_result["matched_skills"])
+            templates[
+                "matched_skills"
+            ].format(
+                value=", ".join(
+                    skill_result[
+                        "matched_skills"
+                    ]
+                )
+            )
         )
 
     if matched_target_roles:
-        reasons.append("Matches target role: " + matched_target_roles[0])
+        reasons.append(
+            templates[
+                "matched_target_role"
+            ].format(
+                value=(
+                    matched_target_roles[0]
+                )
+            )
+        )
 
     if experience_matches:
-        reasons.append(f"Matches experience level: {job_seniority}")
+        reasons.append(
+            templates[
+                "matched_experience"
+            ].format(
+                value=job_seniority
+            )
+        )
 
     if location_matches:
-        reasons.append(f"Matches preferred location: {job_location}")
+        reasons.append(
+            templates[
+                "matched_location"
+            ].format(
+                value=job_location
+            )
+        )
 
     if work_type_matches:
-        reasons.append(f"Matches preferred work type: {job_work_type}")
+        reasons.append(
+            templates[
+                "matched_work_type"
+            ].format(
+                value=job_work_type
+            )
+        )
 
     if matched_liked_areas:
-        reasons.append("Matches liked area: " + matched_liked_areas[0])
+        reasons.append(
+            templates[
+                "matched_liked_area"
+            ].format(
+                value=(
+                    matched_liked_areas[0]
+                )
+            )
+        )
 
     if matched_career_goals:
-        reasons.append("Supports career goal: " + matched_career_goals[0])
+        reasons.append(
+            templates[
+                "matched_career_goal"
+            ].format(
+                value=(
+                    matched_career_goals[0]
+                )
+            )
+        )
 
     return reasons
 
@@ -298,25 +414,59 @@ def _build_positive_reasons(
 def _build_penalties(
     matched_disliked_areas: list[str],
     hard_constraint_conflicts: list[str],
+    *,
+    output_language: str,
 ) -> list[str]:
     """
-    Build explanation messages for penalties.
+    Build localized explanation messages for penalties.
     """
+    templates = (
+        RULE_EXPLANATION_TEMPLATES[
+            output_language
+        ]
+    )
+
     penalties = []
 
-    for disliked_area in matched_disliked_areas:
-        penalties.append(f"Contains disliked area: {disliked_area}")
+    for disliked_area in (
+        matched_disliked_areas
+    ):
+        penalties.append(
+            templates[
+                "disliked_area"
+            ].format(
+                value=disliked_area
+            )
+        )
 
-    for conflict in hard_constraint_conflicts:
-        penalties.append(f"Conflicts with hard constraint: {conflict}")
+    for conflict in (
+        hard_constraint_conflicts
+    ):
+        penalties.append(
+            templates[
+                "hard_constraint"
+            ].format(
+                value=conflict
+            )
+        )
 
     return penalties
 
 
-def score_job(profile: dict[str, Any], job: dict[str, Any]) -> dict[str, Any]:
+def score_job(
+    profile: dict[str, Any],
+    job: dict[str, Any],
+    *,
+    output_language: str = "en",
+) -> dict[str, Any]:
     """
     Score a job against a career profile using positive and negative factors.
     """
+    normalized_output_language = (
+        _normalize_output_language(
+            output_language
+        )
+    )
     skill_result = calculate_skill_match(profile, job)
     searchable_text = _build_job_search_text(job)
 
@@ -386,10 +536,20 @@ def score_job(profile: dict[str, Any], job: dict[str, Any]) -> dict[str, Any]:
         job_work_type=job_work_type,
         matched_liked_areas=matched_liked_areas,
         matched_career_goals=matched_career_goals,
+        output_language=(
+            normalized_output_language
+        ),
     )
     penalties = _build_penalties(
-        matched_disliked_areas=matched_disliked_areas,
-        hard_constraint_conflicts=hard_constraint_conflicts,
+        matched_disliked_areas=(
+            matched_disliked_areas
+        ),
+        hard_constraint_conflicts=(
+            hard_constraint_conflicts
+        ),
+        output_language=(
+            normalized_output_language
+        ),
     )
 
     return {

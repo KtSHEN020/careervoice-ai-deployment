@@ -8,6 +8,10 @@ SUPPORTED_INPUT_MODES = ("profile", "text", "voice")
 SUPPORTED_PROFILE_EXTRACTORS = ("rules", "llm")
 SUPPORTED_JOB_SOURCES = ("adzuna",)
 SUPPORTED_RECOMMENDER_SCORERS = ("rules", "llm")
+SUPPORTED_OUTPUT_LANGUAGES = (
+    "en",
+    "zh-CN",
+)
 
 
 def normalize_job_queries(values: tuple[str, ...]) -> tuple[str, ...]:
@@ -54,6 +58,7 @@ class WorkflowConfig:
     recommendations_output_path: Path = Path("outputs/recommendations.json")
 
     profile_extractor: str = "rules"
+    output_language: str = "en"
 
     job_source: str = "adzuna"
     job_queries: tuple[str, ...] = ()
@@ -94,6 +99,20 @@ class WorkflowConfig:
             raise ValueError(
                 f"Unsupported profile extractor: {self.profile_extractor}. "
                 f"Supported extractors: {supported}."
+            )
+
+        if (
+            self.output_language
+            not in SUPPORTED_OUTPUT_LANGUAGES
+        ):
+            supported = ", ".join(
+                SUPPORTED_OUTPUT_LANGUAGES
+            )
+
+            raise ValueError(
+                "Unsupported output language: "
+                f"{self.output_language}. "
+                f"Supported output languages: {supported}."
             )
 
         if self.job_source not in SUPPORTED_JOB_SOURCES:

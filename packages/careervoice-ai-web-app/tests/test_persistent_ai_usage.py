@@ -121,7 +121,7 @@ def test_persistent_budget_reserves_usage() -> None:
             "user": user,
             "usage_date": usage_date,
             "units": 10,
-            "daily_limit": 20,
+            "daily_limit": 40,
             "operation": UsageOperation.AI_RANKING,
         }
     ]
@@ -242,7 +242,7 @@ def test_persistent_budget_reports_database_status() -> None:
         UsageDecision(
             allowed=True,
             ai_units_used=7,
-            remaining_ai_units=13,
+            remaining_ai_units=33,
         ),
         snapshot=DailyUsageSnapshot(
             user_id=user.id,
@@ -263,9 +263,9 @@ def test_persistent_budget_reports_database_status() -> None:
     )
 
     assert budget.status() == AIUsageStatus(
-        limit=20,
+        limit=40,
         used=7,
-        remaining=13,
+        remaining=33,
         profile_extractions=2,
         voice_transcriptions=1,
         document_recognitions=0,

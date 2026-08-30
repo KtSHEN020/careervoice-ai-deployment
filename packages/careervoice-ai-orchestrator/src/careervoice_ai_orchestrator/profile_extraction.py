@@ -8,39 +8,67 @@ from careervoice_ai_orchestrator.command_runner import (
 from careervoice_ai_orchestrator.models import WorkflowConfig
 
 
-def build_text_profile_extraction_command(config: WorkflowConfig) -> list[str]:
+def build_text_profile_extraction_command(
+    config: WorkflowConfig,
+) -> list[str]:
     """
     Build the command used to call Repo 1 for text-based profile extraction.
-
-    Repo 4 collects terminal text and saves it to a file. Repo 1 then reads
-    that file and creates career_profile.json.
     """
-    return [
+    command = [
         "career-profile-extract",
         "file",
         str(config.profile_input_path),
         "--extractor",
         config.profile_extractor,
-        "--output",
-        str(config.profile_path),
     ]
 
+    if config.output_language != "en":
+        command.extend(
+            [
+                "--output-language",
+                config.output_language,
+            ]
+        )
 
-def build_voice_profile_extraction_command(config: WorkflowConfig) -> list[str]:
+    command.extend(
+        [
+            "--output",
+            str(config.profile_path),
+        ]
+    )
+
+    return command
+
+
+def build_voice_profile_extraction_command(
+    config: WorkflowConfig,
+) -> list[str]:
     """
     Build the command used to call Repo 1 for voice-based profile extraction.
-
-    Repo 1 is responsible for handling recording, transcription, and profile
-    extraction.
     """
-    return [
+    command = [
         "career-profile-extract",
         "voice",
         "--extractor",
         config.profile_extractor,
-        "--output",
-        str(config.profile_path),
     ]
+
+    if config.output_language != "en":
+        command.extend(
+            [
+                "--output-language",
+                config.output_language,
+            ]
+        )
+
+    command.extend(
+        [
+            "--output",
+            str(config.profile_path),
+        ]
+    )
+
+    return command
 
 
 def build_profile_extraction_command(config: WorkflowConfig) -> list[str]:

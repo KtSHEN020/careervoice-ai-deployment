@@ -130,3 +130,36 @@ def test_run_recommendations_creates_output_directory(tmp_path: Path) -> None:
     run_recommendations(config, runner=runner)
 
     assert output_path.parent.exists()
+
+
+def test_build_recommendation_command_passes_output_language() -> None:
+    config = WorkflowConfig(
+        profile_path="examples/career_profile.json",
+        jobs_output_path="outputs/jobs.json",
+        recommendations_output_path=(
+            "outputs/recommendations.json"
+        ),
+        recommender_scorer="llm",
+        recommendation_max_results=5,
+        output_language="zh-CN",
+    )
+
+    command = build_recommendation_command(
+        config
+    )
+
+    assert command == [
+        "job-recommend",
+        "--profile",
+        "examples/career_profile.json",
+        "--jobs",
+        "outputs/jobs.json",
+        "--max-results",
+        "5",
+        "--scorer",
+        "llm",
+        "--output-language",
+        "zh-CN",
+        "--output",
+        "outputs/recommendations.json",
+    ]

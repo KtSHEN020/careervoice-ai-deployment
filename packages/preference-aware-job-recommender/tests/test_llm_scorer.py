@@ -216,3 +216,209 @@ def test_score_job_with_llm_rejects_mismatched_job_id() -> None:
             job=create_sample_job(),
             client=client,
         )
+
+
+def test_score_job_with_llm_requests_simplified_chinese() -> None:
+    client = FakeOpenAIClient(
+        create_sample_evaluation()
+    )
+
+    score_job_with_llm(
+        profile=create_sample_profile(),
+        job=create_sample_job(),
+        client=client,
+        output_language="zh-CN",
+    )
+
+    developer_message = (
+        client.responses
+        .received_arguments[
+            "input"
+        ][0]["content"]
+    )
+
+    assert (
+        "Simplified Chinese"
+        in developer_message
+    )
+
+    assert (
+        "reasons"
+        in developer_message
+    )
+
+    assert (
+        "job_id exactly"
+        in developer_message
+    )
+
+
+def test_score_job_with_llm_defaults_to_english() -> None:
+    client = FakeOpenAIClient(
+        create_sample_evaluation()
+    )
+
+    score_job_with_llm(
+        profile=create_sample_profile(),
+        job=create_sample_job(),
+        client=client,
+    )
+
+    developer_message = (
+        client.responses
+        .received_arguments[
+            "input"
+        ][0]["content"]
+    )
+
+    assert (
+        "in English"
+        in developer_message
+    )
+
+
+def test_score_job_with_llm_localizes_hard_constraint_penalty() -> None:
+    evaluation = (
+        create_sample_evaluation()
+    )
+
+    evaluation.match_score = 90
+    evaluation.hard_constraint_conflicts = [
+        "avoid sales roles",
+    ]
+
+    client = FakeOpenAIClient(
+        evaluation
+    )
+
+    result = score_job_with_llm(
+        profile=create_sample_profile(),
+        job=create_sample_job(),
+        client=client,
+        output_language="zh-CN",
+    )
+
+    assert (
+        "违反不可妥协要求：avoid sales roles"
+        in result["penalties"]
+    )
+
+
+def test_score_job_with_llm_rejects_unknown_output_language() -> None:
+    client = FakeOpenAIClient(
+        create_sample_evaluation()
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="output_language must be one of",
+    ):
+        score_job_with_llm(
+            profile=create_sample_profile(),
+            job=create_sample_job(),
+            client=client,
+            output_language="fr",
+        )
+
+
+def test_score_job_with_llm_does_not_reject_without_profile_hard_constraints() -> None:
+    evaluation = (
+        create_sample_evaluation()
+    )
+
+    evaluation.match_score = 65
+    evaluation.hard_constraint_conflicts = [
+        "无明确硬性约束冲突",
+    ]
+
+    profile = create_sample_profile()
+    profile["hard_constraints"] = []
+
+    client = FakeOpenAIClient(
+        evaluation
+    )
+
+    result = score_job_with_llm(
+        profile=profile,
+        job=create_sample_job(),
+        client=client,
+        output_language="zh-CN",
+    )
+
+    assert (
+        result[
+            "is_rejected_by_constraints"
+        ]
+        is False
+    )
+
+    assert (
+        result[
+            "matched_details"
+        ][
+            "matched_hard_constraints"
+        ]
+        == []
+    )
+
+    assert not any(
+        penalty.startswith(
+            "违反不可妥协要求："
+        )
+        for penalty
+        in result["penalties"]
+    )
+
+
+def test_score_job_with_llm_ignores_unverified_hard_constraint_conflict() -> None:
+    evaluation = (
+        create_sample_evaluation()
+    )
+
+    evaluation.match_score = 90
+
+    evaluation.hard_constraint_conflicts = [
+        "无明确硬性约束冲突",
+    ]
+
+    profile = create_sample_profile()
+
+    assert (
+        profile["hard_constraints"]
+        == ["avoid sales roles"]
+    )
+
+    client = FakeOpenAIClient(
+        evaluation
+    )
+
+    result = score_job_with_llm(
+        profile=profile,
+        job=create_sample_job(),
+        client=client,
+        output_language="zh-CN",
+    )
+
+    assert (
+        result[
+            "is_rejected_by_constraints"
+        ]
+        is False
+    )
+
+    assert (
+        result[
+            "matched_details"
+        ][
+            "matched_hard_constraints"
+        ]
+        == []
+    )
+
+    assert not any(
+        penalty.startswith(
+            "违反不可妥协要求："
+        )
+        for penalty
+        in result["penalties"]
+    )

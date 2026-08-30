@@ -12,6 +12,9 @@ from careervoice_ai_web_app.ai_usage import (
 from careervoice_ai_web_app.authentication import (
     AuthenticationSession,
 )
+from careervoice_ai_web_app.i18n import (
+    LANGUAGE_STATE_KEY,
+)
 from careervoice_ai_web_app.persistent_ai_usage import (
     PersistentAIUsageBudget,
 )
@@ -80,9 +83,9 @@ def _configure_auth_runtime(
         PersistentAIUsageBudget,
         "status",
         lambda self: AIUsageStatus(
-            limit=20,
+            limit=40,
             used=7,
-            remaining=13,
+            remaining=33,
             profile_extractions=2,
             voice_transcriptions=1,
             document_recognitions=0,
@@ -389,4 +392,216 @@ def test_recommendation_form_caps_public_maximum() -> None:
     assert (
         max_results_input.max
         == MAX_RECOMMENDATIONS
+    )
+
+
+def test_recommendation_ui_renders_simplified_chinese() -> None:
+    app = AppTest.from_file(
+        str(APP_PATH)
+    )
+
+    _seed_completed_job_search(
+        app
+    )
+
+    app.session_state[
+        LANGUAGE_STATE_KEY
+    ] = "zh-CN"
+
+    app.session_state[
+        RECOMMENDATIONS_KEY
+    ] = {
+        "recommendations": [
+            {
+                "job_id": "job-1",
+                "title": (
+                    "Junior Software Developer"
+                ),
+                "company": (
+                    "Example Company"
+                ),
+                "match_score": 84,
+                "recommendation_level": (
+                    "strong_match"
+                ),
+                "reasons": [
+                    (
+                        "Matches the preferred role."
+                    ),
+                ],
+                "missing_skills": [
+                    "Docker",
+                ],
+                "penalties": [],
+                "uncertainties": [],
+                "is_rejected_by_constraints": (
+                    False
+                ),
+                "scoring_method": "rules",
+                "matched_details": {
+                    "matched_skills": [
+                        "Python",
+                    ],
+                },
+            }
+        ],
+        "total_jobs_scored": 2,
+        "total_recommendations_returned": 1,
+        "scoring_method": "rules",
+    }
+
+    app.run(
+        timeout=15
+    )
+
+    assert len(
+        app.exception
+    ) == 0
+
+    assert any(
+        subheader.value
+        == "职位匹配与解释"
+        for subheader
+        in app.subheader
+    )
+
+    assert any(
+        selectbox.label
+        == "排序方式"
+        for selectbox
+        in app.selectbox
+    )
+
+    assert any(
+        button.label
+        == "生成职位推荐"
+        for button
+        in app.button
+    )
+
+    assert any(
+        subheader.value
+        == "推荐职位"
+        for subheader
+        in app.subheader
+    )
+
+    assert any(
+        metric.label
+        == "匹配分数"
+        and metric.value
+        == "84/100"
+        for metric
+        in app.metric
+    )
+
+    assert any(
+        metric.label
+        == "排序方式"
+        and metric.value
+        == "标准"
+        for metric
+        in app.metric
+    )
+
+    assert any(
+        download_button.label
+        == "下载职位推荐"
+        for download_button
+        in app.download_button
+    )
+
+
+def test_ranking_selector_localizes_saved_llm_setting(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv(
+        "OPENAI_API_KEY",
+        "test-openai-key",
+    )
+
+    chinese_app = AppTest.from_file(
+        str(APP_PATH)
+    )
+
+    _seed_completed_job_search(
+        chinese_app
+    )
+
+    chinese_app.session_state[
+        RECOMMENDATION_SETTINGS_KEY
+    ] = {
+        "scorer": "llm",
+        "max_results": 1,
+        "exclude_rejected": False,
+    }
+
+    chinese_app.session_state[
+        LANGUAGE_STATE_KEY
+    ] = "zh-CN"
+
+    chinese_app.run(
+        timeout=15
+    )
+
+    assert len(
+        chinese_app.exception
+    ) == 0
+
+    chinese_selector = next(
+        selectbox
+        for selectbox
+        in chinese_app.selectbox
+        if (
+            selectbox.label
+            == "排序方式"
+        )
+    )
+
+    assert (
+        chinese_selector.value
+        == "llm"
+    )
+
+    english_app = AppTest.from_file(
+        str(APP_PATH)
+    )
+
+    _seed_completed_job_search(
+        english_app
+    )
+
+    english_app.session_state[
+        RECOMMENDATION_SETTINGS_KEY
+    ] = {
+        "scorer": "llm",
+        "max_results": 1,
+        "exclude_rejected": False,
+    }
+
+    english_app.session_state[
+        LANGUAGE_STATE_KEY
+    ] = "en"
+
+    english_app.run(
+        timeout=15
+    )
+
+    assert len(
+        english_app.exception
+    ) == 0
+
+    english_selector = next(
+        selectbox
+        for selectbox
+        in english_app.selectbox
+        if (
+            selectbox.label
+            == "Ranking method"
+        )
+    )
+
+    assert (
+        english_selector.value
+        == "llm"
     )

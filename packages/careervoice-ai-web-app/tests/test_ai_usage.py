@@ -37,13 +37,13 @@ def test_ai_usage_budget_reserves_units() -> None:
     )
 
     assert budget.used == 11
-    assert budget.remaining == 9
+    assert budget.remaining == 29
     assert state[AI_USAGE_UNITS_KEY] == 11
 
 
 def test_ai_usage_budget_rejects_action_over_remaining_allowance() -> None:
     state: dict[str, object] = {
-        AI_USAGE_UNITS_KEY: 15,
+        AI_USAGE_UNITS_KEY: 35,
     }
 
     budget = SessionAIUsageBudget(state)
@@ -57,13 +57,13 @@ def test_ai_usage_budget_rejects_action_over_remaining_allowance() -> None:
             feature="AI-assisted job ranking",
         )
 
-    assert budget.used == 15
+    assert budget.used == 35
     assert budget.remaining == 5
 
 
 def test_ai_usage_budget_allows_exact_remaining_allowance() -> None:
     state: dict[str, object] = {
-        AI_USAGE_UNITS_KEY: 10,
+        AI_USAGE_UNITS_KEY: 30,
     }
 
     budget = SessionAIUsageBudget(state)
@@ -73,7 +73,7 @@ def test_ai_usage_budget_allows_exact_remaining_allowance() -> None:
         feature="AI-assisted job ranking",
     )
 
-    assert budget.used == 20
+    assert budget.used == 40
     assert budget.remaining == 0
 
 
@@ -102,7 +102,7 @@ def test_ai_usage_budget_reports_status() -> None:
     budget = SessionAIUsageBudget(state)
 
     assert budget.status() == AIUsageStatus(
-        limit=20,
+        limit=40,
         used=7,
-        remaining=13,
+        remaining=33,
     )

@@ -12,7 +12,10 @@ from preference_aware_job_recommender.data_loader import (
 from preference_aware_job_recommender.exporter import (
     export_recommendations_to_json,
 )
-from preference_aware_job_recommender.llm_scorer import DEFAULT_LLM_MODEL
+from preference_aware_job_recommender.llm_scorer import (
+    DEFAULT_LLM_MODEL,
+    SUPPORTED_OUTPUT_LANGUAGES,
+)
 from preference_aware_job_recommender.recommender import recommend_jobs
 
 
@@ -65,6 +68,15 @@ def build_parser() -> argparse.ArgumentParser:
         "--llm-model",
         default=DEFAULT_LLM_MODEL,
         help="OpenAI model to use when --scorer llm is selected.",
+    )
+    parser.add_argument(
+        "--output-language",
+        choices=SUPPORTED_OUTPUT_LANGUAGES,
+        default="en",
+        help=(
+            "Language for AI-generated recommendation explanations. "
+            "Supported values: en, zh-CN. Defaults to en."
+        ),
     )
 
     return parser
@@ -157,6 +169,7 @@ def main(argv: list[str] | None = None) -> int:
             include_rejected=not args.exclude_rejected,
             scorer=args.scorer,
             llm_model=args.llm_model,
+            output_language=args.output_language,
         )
 
         print(format_recommendations(result))

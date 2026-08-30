@@ -116,3 +116,76 @@ def test_extract_career_profile_with_llm_rejects_missing_parsed_output():
             "I want a software role.",
             client=client,
         )
+
+
+def test_extract_career_profile_with_llm_requests_simplified_chinese():
+    client = FakeOpenAIClient(
+        create_sample_llm_profile()
+    )
+
+    extract_career_profile_with_llm(
+        "I want a junior backend role.",
+        client=client,
+        output_language="zh-CN",
+    )
+
+    developer_message = (
+        client.responses
+        .received_arguments[
+            "input"
+        ][0]["content"]
+    )
+
+    assert (
+        "Simplified Chinese"
+        in developer_message
+    )
+
+    assert (
+        "target_roles"
+        in developer_message
+    )
+
+    assert (
+        "downstream job search"
+        in developer_message
+    )
+
+
+def test_extract_career_profile_with_llm_defaults_to_english():
+    client = FakeOpenAIClient(
+        create_sample_llm_profile()
+    )
+
+    extract_career_profile_with_llm(
+        "I want a junior backend role.",
+        client=client,
+    )
+
+    developer_message = (
+        client.responses
+        .received_arguments[
+            "input"
+        ][0]["content"]
+    )
+
+    assert (
+        "Use English"
+        in developer_message
+    )
+
+
+def test_extract_career_profile_with_llm_rejects_unknown_output_language():
+    client = FakeOpenAIClient(
+        create_sample_llm_profile()
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="output_language must be one of",
+    ):
+        extract_career_profile_with_llm(
+            "I want a software role.",
+            client=client,
+            output_language="fr",
+        )

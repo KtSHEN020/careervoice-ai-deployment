@@ -10,7 +10,7 @@ from careervoice_ai_web_app.persistent_usage import UsageOperation
 
 AI_USAGE_UNITS_KEY = "ai_usage_units"
 
-MAX_AI_USAGE_UNITS_PER_DAY = 20
+MAX_AI_USAGE_UNITS_PER_DAY = 40
 
 # Keep the existing name for compatibility with the current
 # session-based implementation and tests.

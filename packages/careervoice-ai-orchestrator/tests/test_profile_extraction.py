@@ -219,3 +219,57 @@ def test_run_profile_extraction_creates_output_directories(tmp_path: Path) -> No
 
     assert input_path.parent.exists()
     assert profile_path.parent.exists()
+
+
+def test_build_text_profile_extraction_command_passes_output_language() -> None:
+    config = WorkflowConfig(
+        input_mode="text",
+        profile_input_path="outputs/profile_input.txt",
+        profile_path="outputs/career_profile.json",
+        profile_extractor="llm",
+        output_language="zh-CN",
+    )
+
+    command = (
+        build_text_profile_extraction_command(
+            config
+        )
+    )
+
+    assert command == [
+        "career-profile-extract",
+        "file",
+        "outputs/profile_input.txt",
+        "--extractor",
+        "llm",
+        "--output-language",
+        "zh-CN",
+        "--output",
+        "outputs/career_profile.json",
+    ]
+
+
+def test_build_voice_profile_extraction_command_passes_output_language() -> None:
+    config = WorkflowConfig(
+        input_mode="voice",
+        profile_path="outputs/career_profile.json",
+        profile_extractor="llm",
+        output_language="zh-CN",
+    )
+
+    command = (
+        build_voice_profile_extraction_command(
+            config
+        )
+    )
+
+    assert command == [
+        "career-profile-extract",
+        "voice",
+        "--extractor",
+        "llm",
+        "--output-language",
+        "zh-CN",
+        "--output",
+        "outputs/career_profile.json",
+    ]

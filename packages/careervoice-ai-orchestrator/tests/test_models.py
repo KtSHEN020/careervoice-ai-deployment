@@ -24,6 +24,7 @@ def test_workflow_config_uses_default_values() -> None:
     assert config.recommender_scorer == "rules"
     assert config.recommendation_max_results == 10
     assert config.exclude_rejected is False
+    assert config.output_language == "en"
 
 
 def test_workflow_config_converts_string_paths_to_path_objects() -> None:
@@ -89,3 +90,24 @@ def test_workflow_config_rejects_unsupported_recommender_scorer() -> None:
 def test_workflow_config_rejects_invalid_recommendation_max_results() -> None:
     with pytest.raises(ValueError, match="recommendation_max_results"):
         WorkflowConfig(recommendation_max_results=0)
+
+
+def test_workflow_config_accepts_simplified_chinese() -> None:
+    config = WorkflowConfig(
+        output_language="zh-CN"
+    )
+
+    assert (
+        config.output_language
+        == "zh-CN"
+    )
+
+
+def test_workflow_config_rejects_unsupported_output_language() -> None:
+    with pytest.raises(
+        ValueError,
+        match="Unsupported output language",
+    ):
+        WorkflowConfig(
+            output_language="fr"
+        )

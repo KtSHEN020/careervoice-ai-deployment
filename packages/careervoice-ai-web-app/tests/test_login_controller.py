@@ -6,6 +6,9 @@ from careervoice_ai_web_app.authentication import (
     AuthenticationError,
     AuthenticationSession,
 )
+from careervoice_ai_web_app.i18n import (
+    LANGUAGE_STATE_KEY,
+)
 from careervoice_ai_web_app.login_controller import (
     LoginController,
 )
@@ -375,3 +378,34 @@ def test_sign_out_without_provider_session_clears_stale_user_state() -> None:
 
     assert authentication.signed_out_sessions == []
     assert state == {}
+
+
+def test_sign_out_preserves_selected_language() -> None:
+    authentication = FakeAuthenticationService()
+
+    state: dict[str, object] = {
+        AUTHENTICATION_SESSION_KEY: (
+            authentication.session
+        ),
+        AUTHENTICATED_APP_USER_KEY: _user(),
+        LANGUAGE_STATE_KEY: "zh-CN",
+        "career_profile": {
+            "target_roles": [
+                "Software Engineer",
+            ],
+        },
+        "voice_transcript_text": (
+            "private transcript"
+        ),
+    }
+
+    controller, _, _, _ = _controller(
+        authentication_service=authentication,
+        state=state,
+    )
+
+    controller.sign_out()
+
+    assert state == {
+        LANGUAGE_STATE_KEY: "zh-CN",
+    }

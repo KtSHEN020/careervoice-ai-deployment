@@ -14,6 +14,9 @@ from careervoice_ai_web_app.ai_usage import (
 from careervoice_ai_web_app.authentication import (
     AuthenticationSession,
 )
+from careervoice_ai_web_app.i18n import (
+    LANGUAGE_STATE_KEY,
+)
 from careervoice_ai_web_app.persistent_ai_usage import (
     PersistentAIUsageBudget,
 )
@@ -91,9 +94,9 @@ def _configure_auth_runtime(
         PersistentAIUsageBudget,
         "status",
         lambda self: AIUsageStatus(
-            limit=20,
+            limit=40,
             used=7,
-            remaining=13,
+            remaining=33,
             profile_extractions=2,
             voice_transcriptions=1,
             document_recognitions=0,
@@ -743,11 +746,11 @@ def test_authenticated_user_sees_ai_usage_status() -> None:
         for caption in app.sidebar.caption
     ]
 
-    assert "13 AI units remaining" in captions
+    assert "33 AI units remaining" in captions
     assert "Resets daily at 00:00 UTC." in captions
 
     assert any(
-        markdown.value == "**7 / 20 AI units used**"
+        markdown.value == "**7 / 40 AI units used**"
         for markdown in app.sidebar.markdown
     )
 
@@ -773,3 +776,228 @@ def test_authenticated_user_sees_ai_usage_status() -> None:
 
     assert "AI job ranking" in sidebar_text
     assert "0 runs × 10 units" in sidebar_text
+
+
+def test_login_page_renders_simplified_chinese() -> None:
+    app = AppTest.from_file(
+        str(APP_PATH)
+    )
+
+    app.session_state[
+        LANGUAGE_STATE_KEY
+    ] = "zh-CN"
+
+    app.run()
+
+    assert len(app.exception) == 0
+
+    assert any(
+        subheader.value == "登录以继续"
+        for subheader in app.subheader
+    )
+
+    assert any(
+        text_input.label == "邮箱"
+        for text_input in app.text_input
+    )
+
+    assert any(
+        button.label == "发送登录验证码"
+        for button in app.button
+    )
+
+
+def test_authenticated_sidebar_renders_simplified_chinese() -> None:
+    app = _authenticated_app()
+
+    app.session_state[
+        LANGUAGE_STATE_KEY
+    ] = "zh-CN"
+
+    app.run()
+
+    assert len(app.exception) == 0
+
+    assert any(
+        button.label == "退出登录"
+        for button in app.sidebar.button
+    )
+
+    assert any(
+        subheader.value == "今日 AI 辅助额度"
+        for subheader in app.sidebar.subheader
+    )
+
+    captions = [
+        caption.value
+        for caption in app.sidebar.caption
+    ]
+
+    assert "剩余 33 个 AI 单位" in captions
+    assert "每日 00:00 UTC 重置。" in captions
+
+
+def test_profile_input_renders_simplified_chinese() -> None:
+    app = _authenticated_app()
+
+    app.session_state[
+        LANGUAGE_STATE_KEY
+    ] = "zh-CN"
+
+    app.run()
+
+    assert len(app.exception) == 0
+
+    assert any(
+        subheader.value == "介绍你的职业情况"
+        for subheader in app.subheader
+    )
+
+    assert any(
+        text_area.label == "职业信息与偏好"
+        for text_area in app.text_area
+    )
+
+    assert any(
+        button.label == "生成职业画像"
+        for button in app.button
+    )
+
+
+def test_profile_review_renders_simplified_chinese() -> None:
+    app = _authenticated_app()
+
+    app.session_state[
+        LANGUAGE_STATE_KEY
+    ] = "zh-CN"
+
+    app.session_state[
+        PROFILE_KEY
+    ] = {
+        "target_roles": [
+            "Software Developer",
+        ],
+        "skills": [
+            "Python",
+        ],
+        "experience_level": "junior",
+        "preferred_locations": [
+            "Adelaide",
+        ],
+        "preferred_work_types": [
+            "hybrid",
+        ],
+        "liked_areas": [],
+        "disliked_areas": [],
+        "hard_constraints": [],
+        "career_goals": [],
+        "notes": [],
+    }
+
+    app.run()
+
+    assert len(app.exception) == 0
+
+    assert any(
+        subheader.value == "检查并编辑职业画像"
+        for subheader in app.subheader
+    )
+
+    labels = [
+        text_area.label
+        for text_area in app.text_area
+    ]
+
+    assert "目标岗位" in labels
+    assert "技能" in labels
+    assert "偏好地区" in labels
+    assert "不可妥协的要求" in labels
+
+    assert any(
+        button.label == "保存并确认职业画像"
+        for button in app.button
+    )
+
+
+def test_job_search_renders_simplified_chinese() -> None:
+    app = _authenticated_app()
+
+    app.session_state[
+        LANGUAGE_STATE_KEY
+    ] = "zh-CN"
+
+    app.session_state[
+        PROFILE_KEY
+    ] = {
+        "target_roles": [
+            "Software Developer",
+        ],
+        "preferred_locations": [
+            "Adelaide",
+        ],
+    }
+
+    app.session_state[
+        PROFILE_CONFIRMED_KEY
+    ] = True
+
+    app.session_state[
+        JOB_QUERIES_KEY
+    ] = (
+        "Software Developer",
+    )
+
+    app.run()
+
+    assert len(app.exception) == 0
+
+    assert any(
+        subheader.value == "配置职位搜索"
+        for subheader in app.subheader
+    )
+
+    assert any(
+        text_area.label == "要搜索的岗位"
+        for text_area in app.text_area
+    )
+
+    assert any(
+        text_input.label == "搜索地区（可选）"
+        for text_input in app.text_input
+    )
+
+    assert any(
+        number_input.label == "每个岗位最多职位数"
+        for number_input in app.number_input
+    )
+
+    assert any(
+        button.label == "搜索职位"
+        for button in app.button
+    )
+
+
+def test_authenticated_main_copy_renders_simplified_chinese() -> None:
+    app = _authenticated_app()
+
+    app.session_state[
+        LANGUAGE_STATE_KEY
+    ] = "zh-CN"
+
+    app.run()
+
+    assert len(app.exception) == 0
+
+    markdown_values = [
+        element.value
+        for element in app.markdown
+        if isinstance(
+            element.value,
+            str,
+        )
+    ]
+
+    assert (
+        "将你的职业偏好转化为结构化、可解释的职位推荐。"
+        in markdown_values
+    )

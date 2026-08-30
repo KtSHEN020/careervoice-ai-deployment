@@ -5,10 +5,16 @@ from collections.abc import Callable, Mapping
 
 import streamlit as st
 
+from careervoice_ai_web_app.i18n import (
+    get_app_language,
+    translate,
+)
 from careervoice_ai_web_app.public_limits import (
     MAX_RECOMMENDATIONS,
 )
-from careervoice_ai_web_app.session_workspace import SessionWorkspace
+from careervoice_ai_web_app.session_workspace import (
+    SessionWorkspace,
+)
 from careervoice_ai_web_app.ui_state import (
     COLLECTED_JOBS_KEY,
     RECOMMENDATION_SETTINGS_KEY,
@@ -20,8 +26,52 @@ from careervoice_ai_web_app.workflow_service import (
     CareerVoiceWorkflowService,
 )
 
-WorkspaceProvider = Callable[[], SessionWorkspace]
-ErrorRenderer = Callable[[Exception], None]
+WorkspaceProvider = Callable[
+    [],
+    SessionWorkspace,
+]
+ErrorRenderer = Callable[
+    [Exception],
+    None,
+]
+
+
+def _t(
+    key: str,
+    **values: object,
+) -> str:
+    """Translate recommendation UI text."""
+    return translate(
+        get_app_language(
+            st.session_state
+        ),
+        key,
+        **values,
+    )
+
+
+def _localized_recommendation_widget_key(
+    field_name: str,
+) -> str:
+    """
+    Return a widget key scoped to the current UI language.
+
+    Internal widget values remain stable identifiers such as
+    'rules' and 'llm', while changing language creates a fresh
+    presentation-layer widget.
+    """
+    base_key = recommendation_widget_key(
+        st.session_state,
+        field_name,
+    )
+
+    language = get_app_language(
+        st.session_state
+    )
+
+    return (
+        f"{base_key}_{language.value}"
+    )
 
 
 def _saved_recommendation_setting(
@@ -29,44 +79,96 @@ def _saved_recommendation_setting(
     default: object,
 ) -> object:
     """Return a previously completed ranking setting when available."""
-    settings = st.session_state.get(RECOMMENDATION_SETTINGS_KEY)
+    settings = st.session_state.get(
+        RECOMMENDATION_SETTINGS_KEY
+    )
 
-    if not isinstance(settings, dict):
+    if not isinstance(
+        settings,
+        dict,
+    ):
         return default
 
-    return settings.get(field_name, default)
-
-
-def _display_label(
-    value: object,
-    *,
-    fallback: str,
-) -> str:
-    """Convert an internal identifier into readable text."""
-    if not isinstance(value, str):
-        return fallback
-
-    cleaned_value = value.strip()
-
-    if not cleaned_value:
-        return fallback
-
-    return (
-        cleaned_value.replace("_", " ")
-        .replace("-", " ")
-        .title()
+    return settings.get(
+        field_name,
+        default,
     )
 
 
-def _string_items(value: object) -> list[str]:
+def _recommendation_level_label(
+    value: object,
+) -> str:
+    """Return a localized recommendation-level label."""
+    if not isinstance(
+        value,
+        str,
+    ):
+        return _t(
+            "recommendation.level.default"
+        )
+
+    cleaned_value = (
+        value.strip()
+        .lower()
+        .replace(
+            "-",
+            "_",
+        )
+        .replace(
+            " ",
+            "_",
+        )
+    )
+
+    if not cleaned_value:
+        return _t(
+            "recommendation.level.default"
+        )
+
+    translation_key = (
+        "recommendation.level."
+        f"{cleaned_value}"
+    )
+
+    try:
+        return _t(
+            translation_key
+        )
+    except KeyError:
+        return (
+            value.strip()
+            .replace(
+                "_",
+                " ",
+            )
+            .replace(
+                "-",
+                " ",
+            )
+            .title()
+        )
+
+
+def _string_items(
+    value: object,
+) -> list[str]:
     """Return non-empty strings from a recommendation list field."""
-    if not isinstance(value, list):
+    if not isinstance(
+        value,
+        list,
+    ):
         return []
 
     return [
         item.strip()
         for item in value
-        if isinstance(item, str) and item.strip()
+        if (
+            isinstance(
+                item,
+                str,
+            )
+            and item.strip()
+        )
     ]
 
 
@@ -75,12 +177,17 @@ def _render_list_section(
     values: object,
 ) -> None:
     """Render one detail section only when it contains information."""
-    items = _string_items(values)
+    items = _string_items(
+        values
+    )
 
     if not items:
         return
 
-    st.markdown(f"**{heading}**")
+    st.markdown(
+        f"**{heading}**"
+    )
+
     st.markdown(
         "\n".join(
             f"- {item}"
@@ -90,183 +197,344 @@ def _render_list_section(
 
 
 def _matched_skills(
-    recommendation: Mapping[str, object],
+    recommendation: Mapping[
+        str,
+        object,
+    ],
 ) -> list[str]:
-    """Read matched skills from the structured recommendation details."""
-    matched_details = recommendation.get("matched_details")
+    """Read matched skills from structured recommendation details."""
+    matched_details = (
+        recommendation.get(
+            "matched_details"
+        )
+    )
 
-    if not isinstance(matched_details, Mapping):
+    if not isinstance(
+        matched_details,
+        Mapping,
+    ):
         return []
 
     return _string_items(
-        matched_details.get("matched_skills")
+        matched_details.get(
+            "matched_skills"
+        )
     )
 
 
 def _render_recommendation_card(
-    recommendation: Mapping[str, object],
+    recommendation: Mapping[
+        str,
+        object,
+    ],
     *,
     rank: int,
 ) -> None:
-    """Render one ranked recommendation in a bordered card."""
-    title = recommendation.get("title")
-    company = recommendation.get("company")
-    match_score = recommendation.get("match_score")
+    """Render one localized ranked recommendation card."""
+    title = recommendation.get(
+        "title"
+    )
+
+    company = recommendation.get(
+        "company"
+    )
+
+    match_score = recommendation.get(
+        "match_score"
+    )
 
     display_title = (
         title.strip()
-        if isinstance(title, str) and title.strip()
-        else "Untitled job"
+        if (
+            isinstance(
+                title,
+                str,
+            )
+            and title.strip()
+        )
+        else _t(
+            "recommendation.card.untitled"
+        )
     )
 
     display_company = (
         company.strip()
-        if isinstance(company, str) and company.strip()
-        else "Company not provided"
+        if (
+            isinstance(
+                company,
+                str,
+            )
+            and company.strip()
+        )
+        else _t(
+            "recommendation.card.company_missing"
+        )
     )
 
     display_score = (
         match_score
         if (
-            isinstance(match_score, int)
-            and not isinstance(match_score, bool)
+            isinstance(
+                match_score,
+                int,
+            )
+            and not isinstance(
+                match_score,
+                bool,
+            )
         )
         else 0
     )
 
     rejected = (
-        recommendation.get("is_rejected_by_constraints")
+        recommendation.get(
+            "is_rejected_by_constraints"
+        )
         is True
     )
 
-    with st.container(border=True):
-        recommendation_level = _display_label(
-            recommendation.get("recommendation_level"),
-            fallback="Recommendation",
+    with st.container(
+        border=True
+    ):
+        recommendation_level = (
+            _recommendation_level_label(
+                recommendation.get(
+                    "recommendation_level"
+                )
+            )
         )
 
         with st.container(
             horizontal=True,
-            horizontal_alignment="distribute",
+            horizontal_alignment=(
+                "distribute"
+            ),
             vertical_alignment="center",
             gap="medium",
         ):
             with st.container():
                 st.markdown(
-                    f"### {rank}. {display_title}"
+                    f"### {rank}. "
+                    f"{display_title}"
                 )
-                st.caption(display_company)
+
                 st.caption(
-                    f"Recommendation level: {recommendation_level}"
+                    display_company
+                )
+
+                st.caption(
+                    _t(
+                        "recommendation.card.level"
+                    )
+                    + ": "
+                    + recommendation_level
                 )
 
             st.metric(
-                "Match score",
+                _t(
+                    "recommendation.card.match_score"
+                ),
                 f"{display_score}/100",
             )
 
         if rejected:
             st.error(
-                "This job conflicts with one or more "
-                "non-negotiable requirements."
+                _t(
+                    "recommendation.card.rejected"
+                )
             )
 
-        matched_skills = _matched_skills(
-            recommendation
+        matched_skills = (
+            _matched_skills(
+                recommendation
+            )
         )
 
         if matched_skills:
-            st.markdown("**Matching skills**")
-            st.write(", ".join(matched_skills))
+            st.markdown(
+                "**"
+                + _t(
+                    "recommendation.card.matching_skills"
+                )
+                + "**"
+            )
+
+            st.write(
+                ", ".join(
+                    matched_skills
+                )
+            )
 
         _render_list_section(
-            "Why this job may fit",
-            recommendation.get("reasons"),
+            _t(
+                "recommendation.card.reasons"
+            ),
+            recommendation.get(
+                "reasons"
+            ),
         )
 
         _render_list_section(
-            "Missing skills",
-            recommendation.get("missing_skills"),
+            _t(
+                "recommendation.card.missing_skills"
+            ),
+            recommendation.get(
+                "missing_skills"
+            ),
         )
 
         _render_list_section(
-            "Penalties and concerns",
-            recommendation.get("penalties"),
+            _t(
+                "recommendation.card.penalties"
+            ),
+            recommendation.get(
+                "penalties"
+            ),
         )
 
         _render_list_section(
-            "Uncertainties",
-            recommendation.get("uncertainties"),
+            _t(
+                "recommendation.card.uncertainties"
+            ),
+            recommendation.get(
+                "uncertainties"
+            ),
         )
 
-        score_breakdown = recommendation.get(
-            "score_breakdown"
+        score_breakdown = (
+            recommendation.get(
+                "score_breakdown"
+            )
         )
 
-        matched_details = recommendation.get(
-            "matched_details"
+        matched_details = (
+            recommendation.get(
+                "matched_details"
+            )
         )
 
         if (
-            isinstance(score_breakdown, Mapping)
+            isinstance(
+                score_breakdown,
+                Mapping,
+            )
             and score_breakdown
         ):
-            with st.expander("View score details"):
-                st.json(dict(score_breakdown))
+            with st.expander(
+                _t(
+                    "recommendation.card.score_details"
+                )
+            ):
+                st.json(
+                    dict(
+                        score_breakdown
+                    )
+                )
 
         if (
-            isinstance(matched_details, Mapping)
+            isinstance(
+                matched_details,
+                Mapping,
+            )
             and matched_details
         ):
-            with st.expander("View matching details"):
-                st.json(dict(matched_details))
+            with st.expander(
+                _t(
+                    "recommendation.card.match_details"
+                )
+            ):
+                st.json(
+                    dict(
+                        matched_details
+                    )
+                )
 
-def _ranking_method_label(value: object) -> str:
-    """Return a user-friendly recommendation method label."""
+
+def _ranking_method_label(
+    value: object,
+) -> str:
+    """Return a localized recommendation-method label."""
     labels = {
-        "rules": "Standard",
-        "llm": "AI-assisted",
+        "rules": _t(
+            "recommendation.method.standard_short"
+        ),
+        "llm": _t(
+            "recommendation.method.ai_short"
+        ),
     }
 
-    if not isinstance(value, str):
-        return "Unknown"
+    if not isinstance(
+        value,
+        str,
+    ):
+        return _t(
+            "recommendation.method.unknown"
+        )
 
     return labels.get(
         value.strip().lower(),
-        "Unknown",
+        _t(
+            "recommendation.method.unknown"
+        ),
     )
+
 
 def render_recommendation_results() -> None:
-    """Render the latest validated recommendation document."""
-    document_value = st.session_state.get(
-        RECOMMENDATIONS_KEY
+    """Render the latest localized recommendation document."""
+    document_value = (
+        st.session_state.get(
+            RECOMMENDATIONS_KEY
+        )
     )
 
-    if not isinstance(document_value, dict):
+    if not isinstance(
+        document_value,
+        dict,
+    ):
         return
 
-    recommendations = document_value.get(
-        "recommendations"
+    recommendations = (
+        document_value.get(
+            "recommendations"
+        )
     )
 
-    if not isinstance(recommendations, list):
+    if not isinstance(
+        recommendations,
+        list,
+    ):
         return
 
     st.divider()
-    st.subheader("Recommended jobs")
 
-    total_jobs_scored = document_value.get(
-        "total_jobs_scored",
-        0,
+    st.subheader(
+        _t(
+            "recommendation.results.title"
+        )
     )
 
-    total_returned = document_value.get(
-        "total_recommendations_returned",
-        len(recommendations),
+    total_jobs_scored = (
+        document_value.get(
+            "total_jobs_scored",
+            0,
+        )
     )
 
-    scoring_method = _ranking_method_label(
-        document_value.get("scoring_method")
+    total_returned = (
+        document_value.get(
+            "total_recommendations_returned",
+            len(
+                recommendations
+            ),
+        )
+    )
+
+    scoring_method = (
+        _ranking_method_label(
+            document_value.get(
+                "scoring_method"
+            )
+        )
     )
 
     with st.container(
@@ -274,36 +542,54 @@ def render_recommendation_results() -> None:
         gap="medium",
     ):
         st.metric(
-            "Jobs compared",
+            _t(
+                "recommendation.results.jobs_compared"
+            ),
             total_jobs_scored,
         )
 
         st.metric(
-            "Recommendations shown",
+            _t(
+                "recommendation.results.shown"
+            ),
             total_returned,
         )
 
         st.metric(
-            "Ranking method",
+            _t(
+                "recommendation.results.method"
+            ),
             scoring_method,
         )
 
     if not recommendations:
         st.warning(
-            "No recommendations matched the current settings. "
-            "Try showing rejected jobs or increasing the "
-            "recommendation limit."
-        )
-    else:
-        st.success(
-            f"{len(recommendations)} recommendations are ready."
+            _t(
+                "recommendation.results.none"
+            )
         )
 
-        for rank, recommendation in enumerate(
+    else:
+        st.success(
+            _t(
+                "recommendation.results.ready",
+                count=len(
+                    recommendations
+                ),
+            )
+        )
+
+        for (
+            rank,
+            recommendation,
+        ) in enumerate(
             recommendations,
             start=1,
         ):
-            if not isinstance(recommendation, Mapping):
+            if not isinstance(
+                recommendation,
+                Mapping,
+            ):
                 continue
 
             _render_recommendation_card(
@@ -312,7 +598,9 @@ def render_recommendation_results() -> None:
             )
 
     st.download_button(
-        "Download recommendations",
+        _t(
+            "recommendation.results.download"
+        ),
         data=(
             json.dumps(
                 document_value,
@@ -321,7 +609,9 @@ def render_recommendation_results() -> None:
             )
             + "\n"
         ),
-        file_name="recommendations.json",
+        file_name=(
+            "recommendations.json"
+        ),
         mime="application/json",
     )
 
@@ -334,37 +624,58 @@ def render_recommendation_workflow(
     get_workspace: WorkspaceProvider,
     render_error: ErrorRenderer,
 ) -> None:
-    """Render ranking configuration and recommendation results."""
-    jobs_value = st.session_state.get(
-        COLLECTED_JOBS_KEY
+    """Render localized ranking configuration and results."""
+    jobs_value = (
+        st.session_state.get(
+            COLLECTED_JOBS_KEY
+        )
     )
 
-    if not isinstance(jobs_value, list):
+    if not isinstance(
+        jobs_value,
+        list,
+    ):
         return
 
     if not jobs_value:
         return
 
     st.divider()
-    st.subheader("Rank and explain your job matches")
+
+    st.subheader(
+        _t(
+            "recommendation.workflow.title"
+        )
+    )
 
     st.write(
-        "Choose how the application should compare the collected "
-        "jobs with your confirmed career profile."
+        _t(
+            "recommendation.workflow.intro"
+        )
     )
 
     maximum_available = min(
         MAX_RECOMMENDATIONS,
-        len(jobs_value),
+        len(
+            jobs_value
+        ),
     )
 
-    default_max_results = _saved_recommendation_setting(
-        "max_results",
-        min(5, maximum_available),
+    default_max_results = (
+        _saved_recommendation_setting(
+            "max_results",
+            min(
+                5,
+                maximum_available,
+            ),
+        )
     )
 
     if (
-        not isinstance(default_max_results, int)
+        not isinstance(
+            default_max_results,
+            int,
+        )
         or not 1
         <= default_max_results
         <= maximum_available
@@ -374,16 +685,28 @@ def render_recommendation_workflow(
             maximum_available,
         )
 
-    default_scorer = _saved_recommendation_setting(
-        "scorer",
-        "rules",
+    default_scorer = (
+        _saved_recommendation_setting(
+            "scorer",
+            "rules",
+        )
     )
 
-    if default_scorer not in ("rules", "llm"):
-        default_scorer = "rules"
+    if default_scorer not in (
+        "rules",
+        "llm",
+    ):
+        default_scorer = (
+            "rules"
+        )
 
-    if default_scorer == "llm" and not ai_available:
-        default_scorer = "rules"
+    if (
+        default_scorer == "llm"
+        and not ai_available
+    ):
+        default_scorer = (
+            "rules"
+        )
 
     default_exclude_rejected = (
         _saved_recommendation_setting(
@@ -396,127 +719,206 @@ def render_recommendation_workflow(
         default_exclude_rejected,
         bool,
     ):
-        default_exclude_rejected = False
-
-    with st.form("recommendation_form"):
-        ranking_options = (
-            ("rules", "llm")
-            if ai_available
-            else ("rules",)
+        default_exclude_rejected = (
+            False
         )
-        ranking_method = st.selectbox(
-            "Ranking method",
-            options=ranking_options,
-            index=(
-                0
-                if default_scorer == "rules"
-                else 1
-            ),
-            format_func=lambda value: {
-                "rules": "Standard ranking",
-                "llm": "AI-assisted ranking",
-            }[value],
-            key=recommendation_widget_key(
-                st.session_state,
-                "scorer",
-            ),
+
+    with st.form(
+        "recommendation_form"
+    ):
+        ranking_options = (
+            (
+                "rules",
+                "llm",
+            )
+            if ai_available
+            else (
+                "rules",
+            )
+        )
+
+        ranking_method = (
+            st.selectbox(
+                _t(
+                    "recommendation.method.label"
+                ),
+                options=(
+                    ranking_options
+                ),
+                index=(
+                    ranking_options.index(
+                        default_scorer
+                    )
+                ),
+                format_func=(
+                    lambda value: {
+                        "rules": _t(
+                            "recommendation.method.standard"
+                        ),
+                        "llm": _t(
+                            "recommendation.method.ai"
+                        ),
+                    }[value]
+                ),
+                key=(
+                    _localized_recommendation_widget_key(
+                        "scorer"
+                    )
+                ),
+            )
         )
 
         if ai_available:
             st.caption(
-                "Standard ranking is deterministic and does not use "
-                "an external AI service. AI-assisted ranking can provide "
-                "more flexible explanations."
+                _t(
+                    "recommendation.method.help_available"
+                )
             )
+
         else:
             st.caption(
-                "Standard ranking is available. AI-assisted ranking is "
-                "not currently available for this application."
+                _t(
+                    "recommendation.method.help_unavailable"
+                )
             )
 
-        left_column, right_column = st.columns(2)
+        (
+            left_column,
+            right_column,
+        ) = st.columns(
+            2
+        )
 
         with left_column:
-            max_results = st.number_input(
-                "Maximum recommendations",
-                min_value=1,
-                max_value=maximum_available,
-                value=default_max_results,
-                step=1,
-                help=(
-                    f"Show up to {MAX_RECOMMENDATIONS} "
-                    "ranked recommendations."
-                ),
-                key=recommendation_widget_key(
-                    st.session_state,
-                    "max_results",
-                ),
+            max_results = (
+                st.number_input(
+                    _t(
+                        "recommendation.max_results"
+                    ),
+                    min_value=1,
+                    max_value=(
+                        maximum_available
+                    ),
+                    value=(
+                        default_max_results
+                    ),
+                    step=1,
+                    help=_t(
+                        "recommendation.max_results_help",
+                        max_results=(
+                            MAX_RECOMMENDATIONS
+                        ),
+                    ),
+                    key=(
+                        _localized_recommendation_widget_key(
+                            "max_results"
+                        )
+                    ),
+                )
             )
 
         with right_column:
-            exclude_rejected = st.checkbox(
-                "Hide jobs that conflict with "
-                "non-negotiable requirements",
-                value=default_exclude_rejected,
-                key=recommendation_widget_key(
-                    st.session_state,
-                    "exclude_rejected",
-                ),
+            exclude_rejected = (
+                st.checkbox(
+                    _t(
+                        "recommendation.hide_rejected"
+                    ),
+                    value=(
+                        default_exclude_rejected
+                    ),
+                    key=(
+                        _localized_recommendation_widget_key(
+                            "exclude_rejected"
+                        )
+                    ),
+                )
             )
 
-        submitted = st.form_submit_button(
-            "Generate recommendations",
-            type="primary",
-            disabled=not ranking_available,
-            width="stretch",
+        submitted = (
+            st.form_submit_button(
+                _t(
+                    "recommendation.generate"
+                ),
+                type="primary",
+                disabled=(
+                    not ranking_available
+                ),
+                width="stretch",
+            )
         )
 
     if submitted:
-        workspace = get_workspace()
+        workspace = (
+            get_workspace()
+        )
 
         try:
             with st.status(
-                "Ranking and explaining the collected jobs...",
+                _t(
+                    "recommendation.ranking"
+                ),
                 expanded=True,
             ) as status:
                 st.write(
-                    "Comparing each job with your roles, skills, "
-                    "preferences, and non-negotiable requirements."
+                    _t(
+                        "recommendation.comparing"
+                    )
                 )
 
-                result = service.rank_jobs(
-                    scorer=ranking_method,
-                    max_results=int(max_results),
-                    exclude_rejected=exclude_rejected,
-                    workspace=workspace,
+                result = (
+                    service.rank_jobs(
+                        scorer=(
+                            ranking_method
+                        ),
+                        max_results=int(
+                            max_results
+                        ),
+                        exclude_rejected=(
+                            exclude_rejected
+                        ),
+                        workspace=(
+                            workspace
+                        ),
+                    )
                 )
 
                 st.write(
-                    "Preparing readable scores and explanations."
+                    _t(
+                        "recommendation.preparing"
+                    )
                 )
 
                 record_recommendations(
                     st.session_state,
                     settings=(
-                        result.settings.to_state_dict()
+                        result.settings
+                        .to_state_dict()
                     ),
-                    document=result.document.document,
+                    document=(
+                        result.document
+                        .document
+                    ),
                 )
 
                 recommendation_count = (
-                    result.document.total_recommendations_returned
+                    result.document
+                    .total_recommendations_returned
                 )
 
                 status.update(
-                    label=(
-                        "Recommendations ready: "
-                        f"{recommendation_count} jobs ranked."
+                    label=_t(
+                        "recommendation.ready_status",
+                        count=(
+                            recommendation_count
+                        ),
                     ),
                     state="complete",
                     expanded=False,
                 )
 
         except Exception as error:
-            render_error(error)
+            render_error(
+                error
+            )
 
     render_recommendation_results()
