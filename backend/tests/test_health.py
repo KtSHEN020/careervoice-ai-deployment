@@ -100,3 +100,67 @@ def test_runtime_app_configures_usage_service_with_database() -> None:
 
     assert provider is not None
     assert provider.daily_ai_unit_limit == 60
+
+
+def test_cors_allows_configured_frontend_origin() -> None:
+    app = create_app(
+        BackendSettings(
+            environment="test",
+            cors_origins=(
+                "http://localhost:5173",
+            ),
+        )
+    )
+
+    client = TestClient(app)
+
+    response = client.options(
+        "/health",
+        headers={
+            "Origin": (
+                "http://localhost:5173"
+            ),
+            "Access-Control-Request-Method": (
+                "GET"
+            ),
+        },
+    )
+
+    assert response.status_code == 200
+
+    assert (
+        response.headers[
+            "access-control-allow-origin"
+        ]
+        == "http://localhost:5173"
+    )
+
+
+def test_cors_does_not_allow_unknown_origin() -> None:
+    app = create_app(
+        BackendSettings(
+            environment="test",
+            cors_origins=(
+                "http://localhost:5173",
+            ),
+        )
+    )
+
+    client = TestClient(app)
+
+    response = client.options(
+        "/health",
+        headers={
+            "Origin": (
+                "https://unexpected.example.com"
+            ),
+            "Access-Control-Request-Method": (
+                "GET"
+            ),
+        },
+    )
+
+    assert (
+        "access-control-allow-origin"
+        not in response.headers
+    )

@@ -41,6 +41,7 @@ from backend.app.recommendation_service import (
 from backend.app.recommendation_runtime import (
     build_recommendation_service,
 )
+from fastapi.middleware.cors import CORSMiddleware
 
 
 def create_app(
@@ -69,6 +70,16 @@ def create_app(
     application = FastAPI(
         title=resolved_settings.api_title,
         version=resolved_settings.api_version,
+    )
+
+    application.add_middleware(
+        CORSMiddleware,
+        allow_origins=list(
+            resolved_settings.cors_origins
+        ),
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
     )
 
     application.state.current_user_resolver = (

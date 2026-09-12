@@ -15,6 +15,11 @@ SUPPORTED_ENVIRONMENTS = {
 
 DEFAULT_DAILY_AI_UNIT_LIMIT = 40
 
+DEFAULT_CORS_ORIGINS = (
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+)
+
 
 @dataclass(frozen=True)
 class BackendSettings:
@@ -24,6 +29,7 @@ class BackendSettings:
     api_title: str = "CareerVoice AI API"
     api_version: str = "0.1.0"
     daily_ai_unit_limit: int = DEFAULT_DAILY_AI_UNIT_LIMIT
+    cors_origins: tuple[str, ...] = DEFAULT_CORS_ORIGINS
 
     @classmethod
     def from_environment(
@@ -65,7 +71,27 @@ class BackendSettings:
                 "CAREERVOICE_DAILY_AI_UNIT_LIMIT must be greater than zero."
             )
 
+        raw_cors_origins = env.get(
+            "CAREERVOICE_CORS_ORIGINS"
+        )
+
+        if raw_cors_origins is None:
+            cors_origins = DEFAULT_CORS_ORIGINS
+        else:
+            cors_origins = tuple(
+                origin.strip()
+                for origin in raw_cors_origins.split(",")
+                if origin.strip()
+            )
+
+            if not cors_origins:
+                raise ValueError(
+                    "CAREERVOICE_CORS_ORIGINS must contain "
+                    "at least one origin."
+                )
+
         return cls(
             environment=app_environment,
             daily_ai_unit_limit=daily_ai_unit_limit,
+            cors_origins=cors_origins,
         )
