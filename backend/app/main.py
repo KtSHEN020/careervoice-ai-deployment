@@ -23,6 +23,12 @@ from backend.app.usage_service import (
 from backend.app.usage_runtime import (
     build_daily_usage_status_provider,
 )
+from backend.app.profile_runtime import (
+    build_profile_extraction_service,
+)
+from backend.app.profile_service import (
+    ProfileExtractionProvider,
+)
 
 
 def create_app(
@@ -30,6 +36,9 @@ def create_app(
     current_user_resolver: CurrentUserResolver | None = None,
     daily_usage_status_provider: (
         DailyUsageStatusProvider | None
+    ) = None,
+    profile_extraction_provider: (
+        ProfileExtractionProvider | None
     ) = None,
 ) -> FastAPI:
     """Create and configure the CareerVoice AI API."""
@@ -52,6 +61,10 @@ def create_app(
 
     application.state.daily_usage_status_provider = (
         daily_usage_status_provider
+    )
+
+    application.state.profile_extraction_provider = (
+        profile_extraction_provider
     )
 
     @application.get("/health")
@@ -90,11 +103,21 @@ def create_runtime_app(
         )
     )
 
+    profile_extraction_provider = (
+        build_profile_extraction_service(
+            settings=settings,
+            environment=environment,
+        )
+    )
+
     return create_app(
         settings=settings,
         current_user_resolver=current_user_resolver,
         daily_usage_status_provider=(
             daily_usage_status_provider
+        ),
+        profile_extraction_provider=(
+            profile_extraction_provider
         ),
     )
 
