@@ -68,3 +68,35 @@ def test_runtime_app_fails_closed_without_auth_configuration() -> None:
     )
 
     assert response.status_code == 503
+
+
+def test_runtime_app_configures_usage_service_with_database() -> None:
+    environment = {
+        "CAREERVOICE_ENVIRONMENT": "test",
+        "CAREERVOICE_DAILY_AI_UNIT_LIMIT": "60",
+        "SUPABASE_URL": (
+            "https://example.supabase.co"
+        ),
+        "SUPABASE_PUBLISHABLE_KEY": (
+            "test-publishable-key"
+        ),
+        "DATABASE_HOST": (
+            "example.pooler.supabase.com"
+        ),
+        "DATABASE_PORT": "5432",
+        "DATABASE_NAME": "postgres",
+        "DATABASE_USER": "runtime-user",
+        "DATABASE_PASSWORD": "test-password",
+        "DATABASE_SSLMODE": "require",
+    }
+
+    app = create_runtime_app(
+        environment
+    )
+
+    provider = (
+        app.state.daily_usage_status_provider
+    )
+
+    assert provider is not None
+    assert provider.daily_ai_unit_limit == 60

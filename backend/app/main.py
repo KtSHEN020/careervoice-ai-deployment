@@ -17,11 +17,20 @@ from backend.app.security import (
     CurrentUserResolver,
     UnconfiguredCurrentUserResolver,
 )
+from backend.app.usage_service import (
+    DailyUsageStatusProvider,
+)
+from backend.app.usage_runtime import (
+    build_daily_usage_status_provider,
+)
 
 
 def create_app(
     settings: BackendSettings | None = None,
     current_user_resolver: CurrentUserResolver | None = None,
+    daily_usage_status_provider: (
+        DailyUsageStatusProvider | None
+    ) = None,
 ) -> FastAPI:
     """Create and configure the CareerVoice AI API."""
     resolved_settings = (
@@ -39,6 +48,10 @@ def create_app(
         current_user_resolver
         if current_user_resolver is not None
         else UnconfiguredCurrentUserResolver()
+    )
+
+    application.state.daily_usage_status_provider = (
+        daily_usage_status_provider
     )
 
     @application.get("/health")
@@ -70,9 +83,19 @@ def create_runtime_app(
         )
     )
 
+    daily_usage_status_provider = (
+        build_daily_usage_status_provider(
+            settings=settings,
+            environment=environment,
+        )
+    )
+
     return create_app(
         settings=settings,
         current_user_resolver=current_user_resolver,
+        daily_usage_status_provider=(
+            daily_usage_status_provider
+        ),
     )
 
 
