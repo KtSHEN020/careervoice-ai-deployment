@@ -35,6 +35,12 @@ from backend.app.profile_service import (
 from backend.app.job_search_service import (
     JobSearchProvider,
 )
+from backend.app.recommendation_service import (
+    RecommendationProvider,
+)
+from backend.app.recommendation_runtime import (
+    build_recommendation_service,
+)
 
 
 def create_app(
@@ -48,6 +54,9 @@ def create_app(
     ) = None,
     job_search_provider: (
         JobSearchProvider | None
+    ) = None,
+    recommendation_provider: (
+        RecommendationProvider | None
     ) = None,
 ) -> FastAPI:
     """Create and configure the CareerVoice AI API."""
@@ -78,6 +87,10 @@ def create_app(
 
     application.state.job_search_provider = (
         job_search_provider
+    )
+
+    application.state.recommendation_provider = (
+        recommendation_provider
     )
 
     @application.get("/health")
@@ -130,6 +143,13 @@ def create_runtime_app(
         )
     )
 
+    recommendation_provider = (
+        build_recommendation_service(
+            settings=settings,
+            environment=environment,
+        )
+    )
+
     return create_app(
         settings=settings,
         current_user_resolver=current_user_resolver,
@@ -141,6 +161,9 @@ def create_runtime_app(
         ),
         job_search_provider=(
             job_search_provider
+        ),
+        recommendation_provider=(
+            recommendation_provider
         ),
     )
 

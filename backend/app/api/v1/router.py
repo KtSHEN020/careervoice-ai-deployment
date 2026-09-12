@@ -12,6 +12,9 @@ from backend.app.api.v1.profile import (
 from backend.app.api.v1.usage import (
     router as usage_router,
 )
+from backend.app.api.v1.recommendations import (
+    router as recommendations_router,
+)
 
 
 router = APIRouter()
@@ -34,4 +37,9 @@ router.include_router(
 router.include_router(
     jobs_router,
     tags=["jobs"],
+)
+
+router.include_router(
+    recommendations_router,
+    tags=["recommendations"],
 )
