@@ -26,8 +26,14 @@ from backend.app.usage_runtime import (
 from backend.app.profile_runtime import (
     build_profile_extraction_service,
 )
+from backend.app.job_search_runtime import (
+    build_job_search_service,
+)
 from backend.app.profile_service import (
     ProfileExtractionProvider,
+)
+from backend.app.job_search_service import (
+    JobSearchProvider,
 )
 
 
@@ -39,6 +45,9 @@ def create_app(
     ) = None,
     profile_extraction_provider: (
         ProfileExtractionProvider | None
+    ) = None,
+    job_search_provider: (
+        JobSearchProvider | None
     ) = None,
 ) -> FastAPI:
     """Create and configure the CareerVoice AI API."""
@@ -65,6 +74,10 @@ def create_app(
 
     application.state.profile_extraction_provider = (
         profile_extraction_provider
+    )
+
+    application.state.job_search_provider = (
+        job_search_provider
     )
 
     @application.get("/health")
@@ -110,6 +123,13 @@ def create_runtime_app(
         )
     )
 
+    job_search_provider = (
+        build_job_search_service(
+            settings=settings,
+            environment=environment,
+        )
+    )
+
     return create_app(
         settings=settings,
         current_user_resolver=current_user_resolver,
@@ -118,6 +138,9 @@ def create_runtime_app(
         ),
         profile_extraction_provider=(
             profile_extraction_provider
+        ),
+        job_search_provider=(
+            job_search_provider
         ),
     )
 

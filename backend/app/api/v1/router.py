@@ -2,6 +2,9 @@
 
 from fastapi import APIRouter
 
+from backend.app.api.v1.jobs import (
+    router as jobs_router,
+)
 from backend.app.api.v1.me import router as me_router
 from backend.app.api.v1.profile import (
     router as profile_router,
@@ -26,4 +29,9 @@ router.include_router(
 router.include_router(
     profile_router,
     tags=["profile"],
+)
+
+router.include_router(
+    jobs_router,
+    tags=["jobs"],
 )
