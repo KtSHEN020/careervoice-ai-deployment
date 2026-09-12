@@ -66,6 +66,17 @@ class AuthenticationSession:
                 )
 
 
+class AccessTokenAuthenticationService(Protocol):
+    """Authenticate bearer access tokens from an external provider."""
+
+    def authenticate_access_token(
+        self,
+        access_token: str,
+    ) -> AuthenticatedIdentity:
+        """Validate an access token and return its authenticated identity."""
+        ...
+
+
 class AuthenticationService(Protocol):
     """Authentication operations required by the CareerVoice application."""
 

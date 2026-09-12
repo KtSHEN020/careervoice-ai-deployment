@@ -34,6 +34,12 @@ class _SupabaseAuthClient(Protocol):
     ) -> object:
         ...
 
+    def get_user(
+        self,
+        jwt: str | None = None,
+    ) -> object:
+        ...
+
     def refresh_session(
         self,
         refresh_token: str | None = None,
@@ -66,6 +72,41 @@ def _normalize_login_code(value: object) -> str:
     return code
 
 
+def _authenticated_identity_from_user(
+    provider_user: object,
+) -> AuthenticatedIdentity:
+    provider_user_id = getattr(
+        provider_user,
+        "id",
+        None,
+    )
+    provider_email = getattr(
+        provider_user,
+        "email",
+        None,
+    )
+
+    if provider_user_id is None:
+        raise AuthenticationError(
+            "Authentication provider returned an invalid user identity."
+        )
+
+    try:
+        normalized_provider_email = normalize_email(
+            provider_email
+        )
+    except ValueError as exc:
+        raise AuthenticationError(
+            "Authentication provider returned an invalid user email."
+        ) from exc
+
+    return AuthenticatedIdentity(
+        provider="supabase",
+        subject=str(provider_user_id),
+        email=normalized_provider_email,
+    )
+
+
 def _authentication_session_from_response(
     response: object,
     *,
@@ -79,22 +120,11 @@ def _authentication_session_from_response(
             "Authentication provider returned an incomplete session."
         )
 
-    provider_user_id = getattr(provider_user, "id", None)
-    provider_email = getattr(provider_user, "email", None)
+    identity = _authenticated_identity_from_user(
+        provider_user
+    )
 
-    if provider_user_id is None:
-        raise AuthenticationError(
-            "Authentication provider returned an invalid user identity."
-        )
-
-    try:
-        normalized_provider_email = normalize_email(provider_email)
-    except ValueError as exc:
-        raise AuthenticationError(
-            "Authentication provider returned an invalid user email."
-        ) from exc
-
-    if normalized_provider_email != expected_email:
+    if identity.email != expected_email:
         raise AuthenticationError(
             "Authenticated email does not match the requested account."
         )
@@ -107,12 +137,6 @@ def _authentication_session_from_response(
         raise AuthenticationError(
             "Authentication provider returned an invalid access token."
         )
-
-    identity = AuthenticatedIdentity(
-        provider="supabase",
-        subject=str(provider_user_id),
-        email=normalized_provider_email,
-    )
 
     return AuthenticationSession(
         identity=identity,
@@ -158,6 +182,47 @@ class SupabaseAuthenticationService:
         )
 
         return cls(client.auth)
+
+    def authenticate_access_token(
+        self,
+        access_token: str,
+    ) -> AuthenticatedIdentity:
+        """Validate an access token and return its Supabase identity."""
+        if not isinstance(access_token, str):
+            raise AuthenticationError(
+                "Access token must be text."
+            )
+
+        normalized_token = access_token.strip()
+
+        if not normalized_token:
+            raise AuthenticationError(
+                "Access token cannot be empty."
+            )
+
+        try:
+            response = self._auth.get_user(
+                normalized_token
+            )
+        except Exception as exc:
+            raise AuthenticationError(
+                "Access token is invalid or expired."
+            ) from exc
+
+        provider_user = getattr(
+            response,
+            "user",
+            None,
+        )
+
+        if provider_user is None:
+            raise AuthenticationError(
+                "Authentication provider returned an invalid user."
+            )
+
+        return _authenticated_identity_from_user(
+            provider_user
+        )
 
     def request_login_code(self, email: str) -> None:
         """Send an OTP only for an already existing Supabase account."""

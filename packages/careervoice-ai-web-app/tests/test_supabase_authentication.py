@@ -55,6 +55,15 @@ class FakeAuthClient:
 
         self.failures: dict[str, Exception] = {}
 
+        self.access_token: str | None = None
+
+        self.get_user_response = SimpleNamespace(
+            user=SimpleNamespace(
+                id="auth-user-123",
+                email="tester@example.com",
+            )
+        )
+
     def _raise_if_configured(self, operation: str) -> None:
         failure = self.failures.get(operation)
 
@@ -76,6 +85,14 @@ class FakeAuthClient:
         self._raise_if_configured("verify_otp")
         self.verify_params = params
         return self.verify_response
+
+    def get_user(
+        self,
+        jwt: str | None = None,
+    ) -> object:
+        self._raise_if_configured("get_user")
+        self.access_token = jwt
+        return self.get_user_response
 
     def refresh_session(
         self,
@@ -129,6 +146,54 @@ def _session() -> AuthenticationSession:
         refresh_token="refresh-token",
         expires_at=1_800_000_000,
     )
+
+
+def test_authenticate_access_token_returns_identity() -> None:
+    service, auth_client = _service()
+
+    identity = service.authenticate_access_token(
+        "  access-token  "
+    )
+
+    assert auth_client.access_token == "access-token"
+
+    assert identity == AuthenticatedIdentity(
+        provider="supabase",
+        subject="auth-user-123",
+        email="tester@example.com",
+    )
+
+
+def test_authenticate_access_token_wraps_provider_failure() -> None:
+    service, auth_client = _service()
+
+    auth_client.failures["get_user"] = RuntimeError(
+        "Invalid JWT"
+    )
+
+    with pytest.raises(
+        AuthenticationError,
+        match="invalid or expired",
+    ):
+        service.authenticate_access_token(
+            "invalid-token"
+        )
+
+
+def test_authenticate_access_token_rejects_missing_user() -> None:
+    service, auth_client = _service()
+
+    auth_client.get_user_response = SimpleNamespace(
+        user=None
+    )
+
+    with pytest.raises(
+        AuthenticationError,
+        match="invalid user",
+    ):
+        service.authenticate_access_token(
+            "access-token"
+        )
 
 
 def test_request_login_code_disables_account_creation() -> None:
