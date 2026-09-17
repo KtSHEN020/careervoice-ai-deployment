@@ -2,12 +2,20 @@ import { useEffect, useState } from 'react'
 
 import './App.css'
 import { getHealth } from './api/health'
+import { getCurrentSession } from './auth/session'
+import { AuthPanel } from './auth/AuthPanel'
+import type { CareerVoiceSession } from './auth/careervoice-session'
+import { UsageSummary } from './usage/UsageSummary'
 
 type ServiceStatus = 'checking' | 'connected' | 'unavailable'
 
 function App() {
   const [serviceStatus, setServiceStatus] =
     useState<ServiceStatus>('checking')
+  const [
+    careerVoiceSession,
+    setCareerVoiceSession,
+  ] = useState<CareerVoiceSession | null>(null)
 
   useEffect(() => {
     let active = true
@@ -16,10 +24,18 @@ function App() {
       try {
         const health = await getHealth()
 
+        if (health.status !== 'ok') {
+          if (active) {
+            setServiceStatus('unavailable')
+          }
+
+          return
+        }
+
+        await getCurrentSession()
+
         if (active) {
-          setServiceStatus(
-            health.status === 'ok' ? 'connected' : 'unavailable',
-          )
+          setServiceStatus('connected')
         }
       } catch {
         if (active) {
@@ -57,6 +73,16 @@ function App() {
           Build your career profile, search for relevant jobs, and get
           personalized recommendations based on your skills and preferences.
         </p>
+
+        <AuthPanel
+          onSessionChange={setCareerVoiceSession}
+        />
+
+        {careerVoiceSession !== null && (
+          <UsageSummary
+            session={careerVoiceSession}
+          />
+        )}
 
         <div className="workflow">
           <div className="workflow-step">

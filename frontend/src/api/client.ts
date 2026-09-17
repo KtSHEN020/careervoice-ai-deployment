@@ -10,19 +10,40 @@ export class ApiError extends Error {
   }
 }
 
+export interface ApiRequestOptions extends RequestInit {
+  accessToken?: string
+}
+
 export async function apiRequest<T>(
   path: string,
-  init?: RequestInit,
+  options: ApiRequestOptions = {},
 ): Promise<T> {
   const normalizedPath = path.startsWith('/') ? path : `/${path}`
 
-  const response = await fetch(`${API_BASE_URL}${normalizedPath}`, {
-    ...init,
-    headers: {
-      Accept: 'application/json',
-      ...init?.headers,
+  const {
+    accessToken,
+    headers,
+    ...requestInit
+  } = options
+
+  const requestHeaders = new Headers(headers)
+
+  requestHeaders.set('Accept', 'application/json')
+
+  if (accessToken) {
+    requestHeaders.set(
+      'Authorization',
+      `Bearer ${accessToken}`,
+    )
+  }
+
+  const response = await fetch(
+    `${API_BASE_URL}${normalizedPath}`,
+    {
+      ...requestInit,
+      headers: requestHeaders,
     },
-  })
+  )
 
   if (!response.ok) {
     throw new ApiError(
