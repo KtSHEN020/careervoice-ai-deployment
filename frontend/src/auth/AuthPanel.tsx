@@ -4,168 +4,240 @@ import {
   useState,
   type FormEvent,
 } from 'react'
+
 import type { Session } from '@supabase/supabase-js'
 
 import { ApiError } from '../api/client'
-import type { CurrentUser } from '../api/me'
 import {
-  resolveCareerVoiceSession,
-  type CareerVoiceSession,
-} from './careervoice-session'
+  UI_TEXT,
+  type AppLanguage,
+} from '../i18n'
 import {
   requestEmailOtp,
   signOutCurrentSession,
   verifyEmailOtp,
 } from './authentication'
+import {
+  resolveCareerVoiceSession,
+  type CareerVoiceSession,
+} from './careervoice-session'
 import { getCurrentSession } from './session'
 
-type AuthStage =
-  | 'loading'
-  | 'email'
-  | 'otp'
-  | 'authenticated'
-  | 'denied'
-  | 'unavailable'
+const OTP_RESEND_COOLDOWN_SECONDS = 60
 
 interface AuthPanelProps {
+  language: AppLanguage
   onSessionChange: (
     session: CareerVoiceSession | null,
   ) => void
 }
 
-function getSessionEmail(session: Session | null): string {
-  return session?.user.email ?? ''
-}
+type AuthStage =
+  | 'checking'
+  | 'email'
+  | 'code'
+  | 'denied'
+  | 'unavailable'
 
-function authorizationMessage(error: unknown): string {
+type AuthError =
+  | 'expired'
+  | 'initialize'
+  | 'sendCode'
+  | 'verifyCode'
+  | 'denied'
+  | 'unavailable'
+  | 'verifyAccount'
+  | 'signOut'
+  | null
+
+function authorizationError(
+  error: unknown,
+): Exclude<
+  AuthError,
+  'initialize'
+  | 'sendCode'
+  | 'verifyCode'
+  | 'signOut'
+  | null
+> {
   if (error instanceof ApiError) {
     if (error.status === 401) {
-      return 'Your sign-in session is no longer valid. Please sign in again.'
+      return 'expired'
     }
 
     if (error.status === 403) {
-      return 'This account is not currently approved to use CareerVoice.'
+      return 'denied'
     }
 
     if (error.status === 503) {
-      return 'CareerVoice is temporarily unavailable. Please try again shortly.'
+      return 'unavailable'
     }
   }
 
-  return 'CareerVoice could not verify your account. Please try again.'
+  return 'verifyAccount'
 }
 
 export function AuthPanel({
+  language,
   onSessionChange,
 }: AuthPanelProps) {
-  const [stage, setStage] = useState<AuthStage>('loading')
+  const text = UI_TEXT[language].auth
 
-  const [session, setSession] = useState<Session | null>(null)
-  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null)
+  const [stage, setStage] =
+    useState<AuthStage>('checking')
 
-  const [email, setEmail] = useState('')
-  const [code, setCode] = useState('')
+  const [email, setEmail] =
+    useState('')
 
-  const [errorMessage, setErrorMessage] = useState('')
-  const [statusMessage, setStatusMessage] = useState('')
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [code, setCode] =
+    useState('')
+
+  const [
+    pendingSession,
+    setPendingSession,
+  ] = useState<Session | null>(null)
+
+  const [
+    isSubmitting,
+    setIsSubmitting,
+  ] = useState(false)
+
+  const [
+    error,
+    setError,
+  ] = useState<AuthError>(null)
+
+  const [
+    codeSent,
+    setCodeSent,
+  ] = useState(false)
+
+  const [
+    resendCooldown,
+    setResendCooldown,
+  ] = useState(0)
+
+  function errorMessage(): string {
+    if (error === null) {
+      return ''
+    }
+
+    if (error === 'expired') {
+      return text.errors.expired
+    }
+
+    if (error === 'initialize') {
+      return text.errors.initialize
+    }
+
+    if (error === 'sendCode') {
+      return text.errors.sendCode
+    }
+
+    if (error === 'verifyCode') {
+      return text.errors.verifyCode
+    }
+
+    if (error === 'denied') {
+      return text.errors.denied
+    }
+
+    if (error === 'unavailable') {
+      return text.errors.unavailable
+    }
+
+    if (error === 'signOut') {
+      return text.errors.signOut
+    }
+
+    return text.errors.verifyAccount
+  }
 
   const authorizeSession = useCallback(
     async (
-        authenticatedSession: Session,
-    ): Promise<boolean> => {
-        try {
-        const careerVoiceSession =
-            await resolveCareerVoiceSession(
-            authenticatedSession,
-            )
+      supabaseSession: Session,
+    ) => {
+      setPendingSession(
+        supabaseSession,
+      )
 
-        setSession(
-            careerVoiceSession.supabaseSession,
-        )
-        setCurrentUser(
-            careerVoiceSession.user,
-        )
-        setEmail(
-            careerVoiceSession.user.email,
-        )
-        setErrorMessage('')
-        setStage('authenticated')
+      setError(null)
+
+      try {
+        const careerVoiceSession =
+          await resolveCareerVoiceSession(
+            supabaseSession,
+          )
+
+        setPendingSession(null)
 
         onSessionChange(
-            careerVoiceSession,
+          careerVoiceSession,
         )
+      } catch (authorizationFailure) {
+        const nextError =
+          authorizationError(
+            authorizationFailure,
+          )
 
-        return true
-        } catch (error) {
-        setSession(authenticatedSession)
-        setCurrentUser(null)
-        setErrorMessage(
-            authorizationMessage(error),
-        )
+        setError(nextError)
 
-        onSessionChange(null)
-
-        if (error instanceof ApiError) {
-            if (error.status === 401) {
+        if (nextError === 'expired') {
+          try {
             await signOutCurrentSession()
+          } catch {
+            // The local session is already unusable.
+            // Continue back to the login screen.
+          }
 
-            setSession(null)
-            setEmail('')
-            setCode('')
-            setStage('email')
+          setPendingSession(null)
+          setStage('email')
+          onSessionChange(null)
+          return
+        }
 
-            return false
-            }
-
-            if (error.status === 403) {
-            setStage('denied')
-            return false
-            }
-
-            if (error.status === 503) {
-            setStage('unavailable')
-            return false
-            }
+        if (nextError === 'denied') {
+          setStage('denied')
+          onSessionChange(null)
+          return
         }
 
         setStage('unavailable')
-        return false
-        }
+        onSessionChange(null)
+      }
     },
     [onSessionChange],
-    )
+  )
 
   useEffect(() => {
     let active = true
 
     async function restoreSession() {
       try {
-        const restoredSession = await getCurrentSession()
+        const session =
+          await getCurrentSession()
 
         if (!active) {
           return
         }
 
-        if (restoredSession === null) {
-            onSessionChange(null)
-            setStage('email')
-            return
+        if (session === null) {
+          setStage('email')
+          onSessionChange(null)
+          return
         }
 
-        setSession(restoredSession)
-        setEmail(getSessionEmail(restoredSession))
-
-        await authorizeSession(restoredSession)
+        await authorizeSession(
+          session,
+        )
       } catch {
         if (!active) {
           return
         }
 
-        setErrorMessage(
-          'Authentication could not be initialized. Please refresh and try again.',
-        )
+        setError('initialize')
         setStage('email')
+        onSessionChange(null)
       }
     }
 
@@ -174,275 +246,244 @@ export function AuthPanel({
     return () => {
       active = false
     }
-    }, [
-        authorizeSession,
-        onSessionChange,
-    ])
+  }, [
+    authorizeSession,
+    onSessionChange,
+  ])
 
-  async function handleRequestCode(event: FormEvent<HTMLFormElement>) {
+  useEffect(() => {
+    if (resendCooldown <= 0) {
+      return
+    }
+
+    const timer = window.setTimeout(() => {
+      setResendCooldown(
+        (current) =>
+          Math.max(0, current - 1),
+      )
+    }, 1000)
+
+    return () => {
+      window.clearTimeout(timer)
+    }
+  }, [resendCooldown])
+
+  async function handleRequestCode(
+    event: FormEvent<HTMLFormElement>,
+  ) {
     event.preventDefault()
 
-    setErrorMessage('')
-    setStatusMessage('')
+    setError(null)
+    setCodeSent(false)
+
+    const normalizedEmail =
+      email.trim()
+
+    if (!normalizedEmail) {
+      setError('sendCode')
+      return
+    }
+
     setIsSubmitting(true)
 
     try {
-      await requestEmailOtp(email)
+      await requestEmailOtp(
+        normalizedEmail,
+      )
 
-      setStatusMessage(
-        'A verification code has been sent to your email.',
+      setEmail(normalizedEmail)
+      setCode('')
+      setCodeSent(true)
+      setResendCooldown(
+        OTP_RESEND_COOLDOWN_SECONDS,
       )
-      setStage('otp')
+      setStage('code')
     } catch {
-      setErrorMessage(
-        'A verification code could not be sent. Check the email address and try again.',
-      )
+      setError('sendCode')
     } finally {
       setIsSubmitting(false)
     }
   }
 
-  async function handleVerifyCode(event: FormEvent<HTMLFormElement>) {
+  async function handleVerifyCode(
+    event: FormEvent<HTMLFormElement>,
+  ) {
     event.preventDefault()
 
-    setErrorMessage('')
-    setStatusMessage('')
+    setError(null)
+
+    const normalizedCode =
+      code.trim()
+
+    if (!normalizedCode) {
+      setError('verifyCode')
+      return
+    }
+
     setIsSubmitting(true)
 
     try {
-      const authenticatedSession = await verifyEmailOtp(
-        email,
-        code,
+      const session =
+        await verifyEmailOtp(
+          email,
+          normalizedCode,
+        )
+
+      await authorizeSession(
+        session,
       )
-
-      setSession(authenticatedSession)
-
-      const authorized = await authorizeSession(
-        authenticatedSession,
-      )
-
-      if (authorized) {
-        setCode('')
-      }
     } catch {
-      setErrorMessage(
-        'The verification code could not be confirmed. Check the code and try again.',
+      setError('verifyCode')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  async function handleResendCode() {
+    if (
+      isSubmitting
+      || resendCooldown > 0
+    ) {
+      return
+    }
+
+    setError(null)
+    setCodeSent(false)
+    setIsSubmitting(true)
+
+    try {
+      await requestEmailOtp(email)
+
+      setCode('')
+      setCodeSent(true)
+
+      setResendCooldown(
+        OTP_RESEND_COOLDOWN_SECONDS,
       )
+    } catch {
+      setError('sendCode')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  function handleDifferentEmail() {
+    setEmail('')
+    setCode('')
+    setCodeSent(false)
+    setResendCooldown(0)
+    setPendingSession(null)
+    setError(null)
+    setStage('email')
+  }
+
+  async function handleRetry() {
+    setError(null)
+    setIsSubmitting(true)
+
+    try {
+      let session =
+        pendingSession
+
+      if (session === null) {
+        session =
+          await getCurrentSession()
+      }
+
+      if (session === null) {
+        setStage('email')
+        onSessionChange(null)
+        return
+      }
+
+      await authorizeSession(
+        session,
+      )
+    } catch {
+      setError('verifyAccount')
+      setStage('unavailable')
     } finally {
       setIsSubmitting(false)
     }
   }
 
   async function handleSignOut() {
-    setErrorMessage('')
-    setStatusMessage('')
+    setError(null)
     setIsSubmitting(true)
 
     try {
       await signOutCurrentSession()
 
-      onSessionChange(null)
-
-      setSession(null)
-      setCurrentUser(null)
+      setPendingSession(null)
       setEmail('')
       setCode('')
+      setCodeSent(false)
+      setResendCooldown(0)
       setStage('email')
+
+      onSessionChange(null)
     } catch {
-      setErrorMessage(
-        'Sign out failed. Please try again.',
-      )
+      setError('signOut')
     } finally {
       setIsSubmitting(false)
     }
   }
 
-  async function handleRetryAuthorization() {
-    if (session === null) {
-      setStage('email')
-      return
-    }
-
-    setErrorMessage('')
-    setIsSubmitting(true)
-
-    try {
-      await authorizeSession(session)
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-
-  if (stage === 'loading') {
+  if (stage === 'checking') {
     return (
-      <section className="auth-card" aria-live="polite">
+      <section className="auth-card">
         <p className="auth-status">
-          Checking your session…
+          {text.checking}
         </p>
       </section>
     )
   }
 
-  if (stage === 'authenticated') {
+  if (stage === 'email') {
     return (
       <section className="auth-card">
-        <div className="auth-heading">
-          <div>
-            <p className="auth-kicker">
-              Signed in
-            </p>
-            <h2>Welcome back</h2>
-          </div>
-        </div>
-
-        <p className="auth-copy">
-          You are signed in as{' '}
-          <strong>
-            {currentUser?.email ?? getSessionEmail(session)}
-          </strong>.
+        <p className="auth-kicker">
+          {text.privateTesting}
         </p>
 
-        {errorMessage && (
-          <p className="auth-message auth-message-error">
-            {errorMessage}
-          </p>
-        )}
-
-        <button
-          className="secondary-button"
-          type="button"
-          disabled={isSubmitting}
-          onClick={() => {
-            void handleSignOut()
-          }}
-        >
-          {isSubmitting ? 'Signing out…' : 'Sign out'}
-        </button>
-      </section>
-    )
-  }
-
-  if (stage === 'denied') {
-    return (
-      <section className="auth-card">
-        <div className="auth-heading">
-          <div>
-            <p className="auth-kicker">
-              Access unavailable
-            </p>
-            <h2>CareerVoice access is not enabled</h2>
-          </div>
-        </div>
+        <h2>
+          {text.signInTitle}
+        </h2>
 
         <p className="auth-copy">
-          {errorMessage}
-        </p>
-
-        <button
-          className="secondary-button"
-          type="button"
-          disabled={isSubmitting}
-          onClick={() => {
-            void handleSignOut()
-          }}
-        >
-          {isSubmitting ? 'Signing out…' : 'Sign out'}
-        </button>
-      </section>
-    )
-  }
-
-  if (stage === 'unavailable') {
-    return (
-      <section className="auth-card">
-        <div className="auth-heading">
-          <div>
-            <p className="auth-kicker">
-              Service unavailable
-            </p>
-            <h2>We could not verify your CareerVoice account</h2>
-          </div>
-        </div>
-
-        <p className="auth-copy">
-          {errorMessage}
-        </p>
-
-        <div className="auth-actions">
-          <button
-            className="primary-button"
-            type="button"
-            disabled={isSubmitting}
-            onClick={() => {
-              void handleRetryAuthorization()
-            }}
-          >
-            {isSubmitting ? 'Trying again…' : 'Try again'}
-          </button>
-
-          <button
-            className="secondary-button"
-            type="button"
-            disabled={isSubmitting}
-            onClick={() => {
-              void handleSignOut()
-            }}
-          >
-            Sign out
-          </button>
-        </div>
-      </section>
-    )
-  }
-
-  if (stage === 'otp') {
-    return (
-      <section className="auth-card">
-        <div className="auth-heading">
-          <div>
-            <p className="auth-kicker">
-              Email verification
-            </p>
-            <h2>Enter your verification code</h2>
-          </div>
-        </div>
-
-        <p className="auth-copy">
-          We sent a verification code to{' '}
-          <strong>{email}</strong>.
+          {text.approvedEmail}
         </p>
 
         <form
           className="auth-form"
-          onSubmit={handleVerifyCode}
+          onSubmit={
+            handleRequestCode
+          }
         >
-          <label htmlFor="verification-code">
-            Verification code
-          </label>
+          <div className="auth-field">
+            <label htmlFor="auth-email">
+              {text.email}
+            </label>
 
-          <input
-            id="verification-code"
-            name="verification-code"
-            type="text"
-            inputMode="numeric"
-            autoComplete="one-time-code"
-            value={code}
-            disabled={isSubmitting}
-            onChange={(event) => {
-              setCode(event.target.value)
-            }}
-            required
-          />
+            <input
+              id="auth-email"
+              name="email"
+              type="email"
+              autoComplete="email"
+              value={email}
+              disabled={isSubmitting}
+              onChange={(event) => {
+                setEmail(
+                  event.target.value,
+                )
+              }}
+              required
+            />
+          </div>
 
-          {statusMessage && (
-            <p className="auth-message auth-message-success">
-              {statusMessage}
-            </p>
-          )}
-
-          {errorMessage && (
+          {error !== null && (
             <p className="auth-message auth-message-error">
-              {errorMessage}
+              {errorMessage()}
             </p>
           )}
 
@@ -451,77 +492,205 @@ export function AuthPanel({
             type="submit"
             disabled={isSubmitting}
           >
-            {isSubmitting ? 'Verifying…' : 'Verify code'}
-          </button>
-
-          <button
-            className="text-button"
-            type="button"
-            disabled={isSubmitting}
-            onClick={() => {
-              setCode('')
-              setErrorMessage('')
-              setStatusMessage('')
-              setStage('email')
-            }}
-          >
-            Use a different email
+            {isSubmitting
+              ? text.sending
+              : text.sendCode}
           </button>
         </form>
       </section>
     )
   }
 
-  return (
-    <section className="auth-card">
-      <div className="auth-heading">
-        <div>
-          <p className="auth-kicker">
-            Private testing
-          </p>
-          <h2>Sign in to CareerVoice</h2>
-        </div>
-      </div>
+  if (stage === 'code') {
+    return (
+      <section className="auth-card">
+        <p className="auth-kicker">
+          {text.verification}
+        </p>
 
-      <p className="auth-copy">
-        Enter your approved email address to receive a verification code.
-      </p>
+        <h2>
+          {text.enterCode}
+        </h2>
 
-      <form
-        className="auth-form"
-        onSubmit={handleRequestCode}
-      >
-        <label htmlFor="email">
-          Email address
-        </label>
+        <p className="auth-copy">
+          {text.codeSentTo}
+          {' '}
+          <strong>
+            {email}
+          </strong>
+        </p>
 
-        <input
-          id="email"
-          name="email"
-          type="email"
-          autoComplete="email"
-          value={email}
-          disabled={isSubmitting}
-          onChange={(event) => {
-            setEmail(event.target.value)
-          }}
-          required
-        />
-
-        {errorMessage && (
-          <p className="auth-message auth-message-error">
-            {errorMessage}
+        {codeSent && (
+          <p className="auth-message auth-message-success">
+            {text.codeSent}
           </p>
         )}
 
+        <form
+          className="auth-form"
+          onSubmit={
+            handleVerifyCode
+          }
+        >
+          <div className="auth-field">
+            <label htmlFor="auth-code">
+              {text.code}
+            </label>
+
+            <input
+              id="auth-code"
+              name="code"
+              type="text"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              value={code}
+              disabled={isSubmitting}
+              onChange={(event) => {
+                setCode(
+                  event.target.value,
+                )
+              }}
+              required
+            />
+          </div>
+
+          {error !== null && (
+            <p className="auth-message auth-message-error">
+              {errorMessage()}
+            </p>
+          )}
+
+          <button
+            className="primary-button"
+            type="submit"
+            disabled={isSubmitting}
+          >
+            {isSubmitting
+              ? text.verifying
+              : text.verify}
+          </button>
+        </form>
+
+        <div className="auth-resend-section">
+          <div className="auth-resend-row">
+            <span>
+              {text.didntReceiveCode}
+            </span>
+
+            <button
+              className="secondary-button"
+              type="button"
+              disabled={
+                isSubmitting
+                || resendCooldown > 0
+              }
+              onClick={() => {
+                void handleResendCode()
+              }}
+            >
+              {isSubmitting
+                ? text.resending
+                : text.resendCode}
+            </button>
+          </div>
+
+          {resendCooldown > 0 && (
+            <p className="auth-resend-note">
+              {text.resendAvailableIn}
+              {' '}
+              {resendCooldown}
+              {' '}
+              {text.seconds}
+            </p>
+          )}
+
+          <button
+            className="secondary-button"
+            type="button"
+            disabled={isSubmitting}
+            onClick={
+              handleDifferentEmail
+            }
+          >
+            {text.differentEmail}
+          </button>
+        </div>
+      </section>
+    )
+  }
+
+  if (stage === 'denied') {
+    return (
+      <section className="auth-card">
+        <p className="auth-kicker">
+          {text.accessUnavailable}
+        </p>
+
+        <h2>
+          {text.accessNotEnabled}
+        </h2>
+
+        <p className="auth-message auth-message-error">
+          {errorMessage()}
+        </p>
+
+        <button
+          className="secondary-button"
+          type="button"
+          disabled={isSubmitting}
+          onClick={() => {
+            void handleSignOut()
+          }}
+        >
+          {isSubmitting
+            ? text.signingOut
+            : text.signOut}
+        </button>
+      </section>
+    )
+  }
+
+  return (
+    <section className="auth-card">
+      <p className="auth-kicker">
+        {text.serviceUnavailable}
+      </p>
+
+      <h2>
+        {text.verifyFailedTitle}
+      </h2>
+
+      {error !== null && (
+        <p className="auth-message auth-message-error">
+          {errorMessage()}
+        </p>
+      )}
+
+      <div className="auth-actions">
         <button
           className="primary-button"
-          type="submit"
+          type="button"
           disabled={isSubmitting}
+          onClick={() => {
+            void handleRetry()
+          }}
         >
-          {isSubmitting ? 'Sending…' : 'Send verification code'}
+          {isSubmitting
+            ? text.tryingAgain
+            : text.tryAgain}
         </button>
-      </form>
+
+        <button
+          className="secondary-button"
+          type="button"
+          disabled={isSubmitting}
+          onClick={() => {
+            void handleSignOut()
+          }}
+        >
+          {text.signOut}
+        </button>
+      </div>
     </section>
   )
 }

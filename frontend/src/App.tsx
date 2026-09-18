@@ -1,113 +1,255 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 
 import './App.css'
-import { getHealth } from './api/health'
-import { getCurrentSession } from './auth/session'
+
+import type { ProfileExtractionResponse } from './api/profile'
+import { signOutCurrentSession } from './auth/authentication'
 import { AuthPanel } from './auth/AuthPanel'
 import type { CareerVoiceSession } from './auth/careervoice-session'
+import {
+  loadAppLanguage,
+  saveAppLanguage,
+  UI_TEXT,
+  type AppLanguage,
+} from './i18n'
+import { LanguageToggle } from './LanguageToggle'
+import { ProfileInputPanel } from './profile/ProfileInputPanel'
 import { UsageSummary } from './usage/UsageSummary'
 
-type ServiceStatus = 'checking' | 'connected' | 'unavailable'
-
 function App() {
-  const [serviceStatus, setServiceStatus] =
-    useState<ServiceStatus>('checking')
+  const [language, setLanguage] =
+    useState<AppLanguage>(
+      loadAppLanguage,
+    )
+
   const [
     careerVoiceSession,
     setCareerVoiceSession,
-  ] = useState<CareerVoiceSession | null>(null)
+  ] = useState<CareerVoiceSession | null>(
+    null,
+  )
 
-  useEffect(() => {
-    let active = true
+  const [
+    extractedProfile,
+    setExtractedProfile,
+  ] =
+    useState<ProfileExtractionResponse | null>(
+      null,
+    )
 
-    async function checkService() {
-      try {
-        const health = await getHealth()
+  const [
+    usageRefreshKey,
+    setUsageRefreshKey,
+  ] = useState(0)
 
-        if (health.status !== 'ok') {
-          if (active) {
-            setServiceStatus('unavailable')
-          }
+  const [signOutError, setSignOutError] =
+    useState('')
 
-          return
-        }
+  const text = UI_TEXT[language]
 
-        await getCurrentSession()
+  function handleLanguageChange(
+    nextLanguage: AppLanguage,
+  ) {
+    setLanguage(nextLanguage)
+    saveAppLanguage(nextLanguage)
+    setSignOutError('')
+  }
 
-        if (active) {
-          setServiceStatus('connected')
-        }
-      } catch {
-        if (active) {
-          setServiceStatus('unavailable')
-        }
-      }
+  function handleProfileExtracted(
+    result: ProfileExtractionResponse,
+  ) {
+    setExtractedProfile(result)
+
+    setUsageRefreshKey(
+      (current) => current + 1,
+    )
+  }
+
+  async function handleSignOut() {
+    setSignOutError('')
+
+    try {
+      await signOutCurrentSession()
+
+      setCareerVoiceSession(null)
+      setExtractedProfile(null)
+    } catch {
+      setSignOutError(
+        text.app.signOutError,
+      )
     }
+  }
 
-    void checkService()
+  if (careerVoiceSession === null) {
+    return (
+      <main className="auth-page">
+        <section className="auth-page-content">
+          <LanguageToggle
+            language={language}
+            onChange={handleLanguageChange}
+          />
 
-    return () => {
-      active = false
-    }
-  }, [])
+          <h1 className="auth-page-title">
+            CareerVoice AI
+          </h1>
+
+          <AuthPanel
+            language={language}
+            onSessionChange={
+              setCareerVoiceSession
+            }
+          />
+        </section>
+      </main>
+    )
+  }
 
   return (
     <main className="app-shell">
       <section className="hero">
         <div className="top-line">
-          <p className="eyebrow">CareerVoice AI</p>
-
-          <p
-            className={`service-status service-status-${serviceStatus}`}
-            aria-live="polite"
-          >
-            {serviceStatus === 'checking' && 'Connecting…'}
-            {serviceStatus === 'connected' && 'Service ready'}
-            {serviceStatus === 'unavailable' && 'Service unavailable'}
+          <p className="eyebrow">
+            CareerVoice AI
           </p>
+
+          <div className="app-header-controls">
+            <LanguageToggle
+              language={language}
+              onChange={handleLanguageChange}
+            />
+
+            <span className="account-email">
+              {careerVoiceSession.user.email}
+            </span>
+
+            <button
+              className="secondary-button"
+              type="button"
+              onClick={() => {
+                void handleSignOut()
+              }}
+            >
+              {text.app.signOut}
+            </button>
+          </div>
         </div>
 
-        <h1>Find roles that fit your career goals</h1>
+        {signOutError && (
+          <p className="auth-message auth-message-error">
+            {signOutError}
+          </p>
+        )}
+
+        <h1>
+          {text.app.headline}
+        </h1>
 
         <p className="hero-description">
-          Build your career profile, search for relevant jobs, and get
-          personalized recommendations based on your skills and preferences.
+          {text.app.description}
         </p>
 
-        <AuthPanel
-          onSessionChange={setCareerVoiceSession}
+        <UsageSummary
+          session={careerVoiceSession}
+          refreshKey={usageRefreshKey}
+          language={language}
         />
 
-        {careerVoiceSession !== null && (
-          <UsageSummary
-            session={careerVoiceSession}
-          />
+        <ProfileInputPanel
+          session={careerVoiceSession}
+          language={language}
+          onProfileExtracted={
+            handleProfileExtracted
+          }
+        />
+
+        {extractedProfile !== null && (
+          <section className="profile-result-preview">
+            <p className="profile-kicker">
+              {text.app.profileExtracted}
+            </p>
+
+            <h2>
+              {text.app.readyForReview}
+            </h2>
+
+            <p>
+              {
+                extractedProfile.profile
+                  .target_roles.length
+              }
+              {' '}
+              {text.app.targetRoles}
+              {' · '}
+              {
+                extractedProfile.profile
+                  .skills.length
+              }
+              {' '}
+              {text.app.skillsIdentified}
+            </p>
+          </section>
         )}
 
         <div className="workflow">
           <div className="workflow-step">
-            <span className="step-number">1</span>
-            <div>
-              <h2>Build your career profile</h2>
-              <p>Tell us about your skills, preferences, and career goals.</p>
-            </div>
-          </div>
+            <span className="step-number">
+              1
+            </span>
 
-          <div className="workflow-step">
-            <span className="step-number">2</span>
             <div>
-              <h2>Search for jobs</h2>
-              <p>Search across the roles and locations you are interested in.</p>
-            </div>
-          </div>
+              <h2>
+                {
+                  text.app
+                    .workflowProfileTitle
+                }
+              </h2>
 
-          <div className="workflow-step">
-            <span className="step-number">3</span>
-            <div>
-              <h2>Get personalized recommendations</h2>
               <p>
-                Compare jobs using match explanations, missing skills, and
-                preference-aware scoring.
+                {
+                  text.app
+                    .workflowProfileDescription
+                }
+              </p>
+            </div>
+          </div>
+
+          <div className="workflow-step">
+            <span className="step-number">
+              2
+            </span>
+
+            <div>
+              <h2>
+                {text.app.workflowJobsTitle}
+              </h2>
+
+              <p>
+                {
+                  text.app
+                    .workflowJobsDescription
+                }
+              </p>
+            </div>
+          </div>
+
+          <div className="workflow-step">
+            <span className="step-number">
+              3
+            </span>
+
+            <div>
+              <h2>
+                {
+                  text.app
+                    .workflowRecommendationsTitle
+                }
+              </h2>
+
+              <p>
+                {
+                  text.app
+                    .workflowRecommendationsDescription
+                }
               </p>
             </div>
           </div>

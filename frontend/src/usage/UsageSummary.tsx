@@ -9,9 +9,15 @@ import {
   type DailyUsage,
 } from '../api/usage'
 import type { CareerVoiceSession } from '../auth/careervoice-session'
+import {
+  UI_TEXT,
+  type AppLanguage,
+} from '../i18n'
 
 interface UsageSummaryProps {
   session: CareerVoiceSession
+  refreshKey: number
+  language: AppLanguage
 }
 
 type UsageState =
@@ -21,35 +27,46 @@ type UsageState =
 
 function usageErrorMessage(
   error: unknown,
+  language: AppLanguage,
 ): string {
+  const text =
+    UI_TEXT[language].usage.errors
+
   if (error instanceof ApiError) {
     if (error.status === 401) {
-      return 'Your session has expired. Please sign in again.'
+      return text.expired
     }
 
     if (error.status === 403) {
-      return 'Your account does not currently have access to usage information.'
+      return text.denied
     }
 
     if (error.status === 503) {
-      return 'Usage information is temporarily unavailable.'
+      return text.unavailable
     }
   }
 
-  return 'Usage information could not be loaded.'
+  return text.generic
 }
 
 export function UsageSummary({
   session,
+  refreshKey,
+  language,
 }: UsageSummaryProps) {
+  const text =
+    UI_TEXT[language].usage
+
   const [state, setState] =
     useState<UsageState>('loading')
 
   const [usage, setUsage] =
     useState<DailyUsage | null>(null)
 
-  const [errorMessage, setErrorMessage] =
-    useState('')
+  const [
+    errorMessage,
+    setErrorMessage,
+  ] = useState('')
 
   useEffect(() => {
     let active = true
@@ -75,9 +92,14 @@ export function UsageSummary({
         }
 
         setUsage(null)
+
         setErrorMessage(
-          usageErrorMessage(error),
+          usageErrorMessage(
+            error,
+            language,
+          ),
         )
+
         setState('error')
       }
     }
@@ -87,13 +109,17 @@ export function UsageSummary({
     return () => {
       active = false
     }
-  }, [session])
+  }, [
+    session,
+    refreshKey,
+    language,
+  ])
 
   if (state === 'loading') {
     return (
       <section className="usage-card">
         <p className="usage-status">
-          Loading today's usage…
+          {text.loading}
         </p>
       </section>
     )
@@ -117,12 +143,12 @@ export function UsageSummary({
       <div className="usage-heading">
         <div>
           <p className="usage-kicker">
-            Today's AI usage
+            {text.title}
           </p>
 
           <h2>
             {usage.remaining_ai_units}{' '}
-            units remaining
+            {text.remaining}
           </h2>
         </div>
 
@@ -130,7 +156,8 @@ export function UsageSummary({
           {usage.ai_units_used}
           {' / '}
           {usage.daily_ai_unit_limit}
-          {' used'}
+          {' '}
+          {text.used}
         </p>
       </div>
 
@@ -139,35 +166,40 @@ export function UsageSummary({
           <strong>
             {usage.ai_profile_extractions}
           </strong>
-          {' AI profile extractions'}
+          {' '}
+          {text.profileExtractions}
         </p>
 
         <p>
           <strong>
             {usage.voice_transcriptions}
           </strong>
-          {' voice transcriptions'}
+          {' '}
+          {text.voiceTranscriptions}
         </p>
 
         <p>
           <strong>
             {usage.document_recognitions}
           </strong>
-          {' document recognitions'}
+          {' '}
+          {text.documentRecognitions}
         </p>
 
         <p>
           <strong>
             {usage.ai_ranking_runs}
           </strong>
-          {' AI ranking runs'}
+          {' '}
+          {text.rankingRuns}
         </p>
 
         <p>
           <strong>
             {usage.job_searches}
           </strong>
-          {' job searches'}
+          {' '}
+          {text.jobSearches}
         </p>
       </div>
     </section>
