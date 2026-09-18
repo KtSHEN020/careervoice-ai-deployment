@@ -54,7 +54,22 @@ function App() {
   const [signOutError, setSignOutError] =
     useState('')
 
+  const [
+    sidebarOpen,
+    setSidebarOpen,
+  ] = useState(true)
+
   const text = UI_TEXT[language]
+
+  function handleSessionChange(
+    session: CareerVoiceSession | null,
+  ) {
+    setCareerVoiceSession(session)
+
+    if (session !== null) {
+      setSidebarOpen(true)
+    }
+  }
 
   function handleLanguageChange(
     nextLanguage: AppLanguage,
@@ -107,6 +122,7 @@ function App() {
       setCareerVoiceSession(null)
       setExtractedProfile(null)
       setProfileConfirmed(false)
+      setSidebarOpen(true)
     } catch {
       setSignOutError(
         text.app.signOutError,
@@ -130,7 +146,7 @@ function App() {
           <AuthPanel
             language={language}
             onSessionChange={
-              setCareerVoiceSession
+              handleSessionChange
             }
           />
         </section>
@@ -139,21 +155,57 @@ function App() {
   }
 
   return (
-    <main className="authenticated-shell">
-      <AppSidebar
-        session={careerVoiceSession}
-        language={language}
-        usageRefreshKey={
-          usageRefreshKey
-        }
-        signOutError={signOutError}
-        onLanguageChange={
-          handleLanguageChange
-        }
-        onSignOut={() => {
-          void handleSignOut()
-        }}
-      />
+    <main
+      className={
+        sidebarOpen
+          ? 'authenticated-shell'
+          : 'authenticated-shell authenticated-shell-sidebar-closed'
+      }
+    >
+      {sidebarOpen && (
+        <AppSidebar
+          session={careerVoiceSession}
+          language={language}
+          usageRefreshKey={
+            usageRefreshKey
+          }
+          signOutError={signOutError}
+          onLanguageChange={
+            handleLanguageChange
+          }
+          onSignOut={() => {
+            void handleSignOut()
+          }}
+          onClose={() => {
+            setSidebarOpen(false)
+          }}
+        />
+      )}
+
+      {!sidebarOpen && (
+        <button
+          className="sidebar-open-button"
+          type="button"
+          aria-label={text.sidebar.show}
+          title={text.sidebar.show}
+          onClick={() => {
+            setSidebarOpen(true)
+          }}
+        >
+          ☰
+        </button>
+      )}
+
+      {sidebarOpen && (
+        <button
+          className="sidebar-overlay"
+          type="button"
+          aria-label={text.sidebar.hide}
+          onClick={() => {
+            setSidebarOpen(false)
+          }}
+        />
+      )}
 
       <section className="app-content">
         <div className="hero">

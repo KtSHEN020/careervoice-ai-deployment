@@ -15,6 +15,7 @@ interface AppSidebarProps {
     language: AppLanguage,
   ) => void
   onSignOut: () => void
+  onClose: () => void
 }
 
 export function AppSidebar({
@@ -24,13 +25,26 @@ export function AppSidebar({
   signOutError,
   onLanguageChange,
   onSignOut,
+  onClose,
 }: AppSidebarProps) {
   const text = UI_TEXT[language]
 
   return (
     <aside className="app-sidebar">
-      <div className="sidebar-brand">
-        CareerVoice AI
+      <div className="sidebar-header">
+        <div className="sidebar-brand">
+          CareerVoice AI
+        </div>
+
+        <button
+          className="sidebar-toggle-button"
+          type="button"
+          aria-label={text.sidebar.hide}
+          title={text.sidebar.hide}
+          onClick={onClose}
+        >
+          ×
+        </button>
       </div>
 
       <LanguageToggle

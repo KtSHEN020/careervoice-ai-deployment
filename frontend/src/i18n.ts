@@ -8,6 +8,11 @@ export const UI_TEXT = {
       select: 'Select language',
     },
 
+    sidebar: {
+      show: 'Show sidebar',
+      hide: 'Hide sidebar',
+    },
+
     app: {
       headline: 'Find roles that fit your career goals',
       description:
@@ -198,6 +203,11 @@ export const UI_TEXT = {
   'zh-CN': {
     language: {
       select: '选择语言',
+    },
+
+    sidebar: {
+      show: '打开侧边栏',
+      hide: '关闭侧边栏',
     },
 
     app: {
