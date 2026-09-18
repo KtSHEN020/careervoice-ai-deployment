@@ -78,6 +78,22 @@ DISLIKED_AREA_KEYWORDS = {
     "cold calling": "cold calling",
 }
 
+POSITIVE_PREFERENCE_PATTERN = re.compile(
+    r"(?:"
+    r"\bi\s+(?:like|love|enjoy|prefer)\s+"
+    r"|"
+    r"\b(?:i am|i'm)\s+interested\s+in\s+"
+    r")"
+    r"(?!not\b)"
+    r"(.+?)"
+    r"(?="
+    r"\s+(?:but|however|although|though)\b"
+    r"|,\s*not\b"
+    r"|$"
+    r")",
+    re.IGNORECASE,
+)
+
 NEGATIVE_PATTERN = re.compile(
     r"(?:do not want|don't want|do not like|don't like|avoid|not interested in)"
     r"\s+(.+?)(?:[.!?]|$)",
@@ -106,9 +122,8 @@ def extract_career_profile(text: str) -> CareerProfile:
         normalized_text,
         WORK_TYPE_KEYWORDS,
     )
-    profile.liked_areas = _extract_keyword_values(
+    profile.liked_areas = _extract_liked_areas(
         normalized_text,
-        LIKED_AREA_KEYWORDS,
     )
     profile.disliked_areas = _extract_disliked_areas(normalized_text)
     profile.hard_constraints = _build_hard_constraints(profile.disliked_areas)
@@ -177,6 +192,33 @@ def _extract_negative_segments(normalized_text: str) -> list[str]:
     return [
         match.group(1).strip() for match in NEGATIVE_PATTERN.finditer(normalized_text)
     ]
+
+
+def _extract_liked_areas(
+    normalized_text: str,
+) -> list[str]:
+    liked_areas = []
+
+    for sentence in _split_sentences(
+        normalized_text
+    ):
+        for match in (
+            POSITIVE_PREFERENCE_PATTERN.finditer(
+                sentence
+            )
+        ):
+            preference_segment = (
+                match.group(1).strip()
+            )
+
+            liked_areas.extend(
+                _extract_keyword_values(
+                    preference_segment,
+                    LIKED_AREA_KEYWORDS,
+                )
+            )
+
+    return _deduplicate(liked_areas)
 
 
 def _extract_disliked_areas(normalized_text: str) -> list[str]:

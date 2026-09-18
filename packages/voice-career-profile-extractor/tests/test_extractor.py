@@ -25,8 +25,6 @@ def test_extract_career_profile_from_sample_text():
         "liked_areas": [
             "backend development",
             "data-related roles",
-            "AI tools",
-            "software engineering",
         ],
         "disliked_areas": ["sales", "customer service", "senior roles"],
         "hard_constraints": [
@@ -61,3 +59,47 @@ def test_extract_career_profile_does_not_treat_disliked_senior_as_experience():
     assert profile.experience_level is None
     assert profile.disliked_areas == ["senior roles"]
     assert profile.hard_constraints == ["avoid senior roles"]
+
+
+def test_target_role_does_not_imply_liked_area():
+    profile = extract_career_profile(
+        "I am looking for a backend developer role."
+    )
+
+    assert profile.target_roles == [
+        "backend developer",
+    ]
+    assert profile.liked_areas == []
+
+
+def test_explicit_preference_extracts_liked_areas():
+    profile = extract_career_profile(
+        "I prefer backend or data-related roles."
+    )
+
+    assert profile.liked_areas == [
+        "backend development",
+        "data-related roles",
+    ]
+
+
+def test_career_goal_does_not_imply_liked_area():
+    profile = extract_career_profile(
+        "My goal is to move toward AI "
+        "or software engineering."
+    )
+
+    assert profile.career_goals == [
+        "move toward AI or software engineering",
+    ]
+    assert profile.liked_areas == []
+
+
+def test_interested_in_extracts_liked_area():
+    profile = extract_career_profile(
+        "I am interested in AI."
+    )
+
+    assert profile.liked_areas == [
+        "AI tools",
+    ]
