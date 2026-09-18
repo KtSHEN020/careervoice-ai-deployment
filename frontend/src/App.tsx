@@ -13,8 +13,8 @@ import {
   type AppLanguage,
 } from './i18n'
 import { LanguageToggle } from './LanguageToggle'
+import { AppSidebar } from './layout/AppSidebar'
 import { ProfileInputPanel } from './profile/ProfileInputPanel'
-import { UsageSummary } from './usage/UsageSummary'
 
 function App() {
   const [language, setLanguage] =
@@ -105,152 +105,137 @@ function App() {
   }
 
   return (
-    <main className="app-shell">
-      <section className="hero">
-        <div className="top-line">
+    <main className="authenticated-shell">
+      <AppSidebar
+        session={careerVoiceSession}
+        language={language}
+        usageRefreshKey={
+          usageRefreshKey
+        }
+        signOutError={signOutError}
+        onLanguageChange={
+          handleLanguageChange
+        }
+        onSignOut={() => {
+          void handleSignOut()
+        }}
+      />
+
+      <section className="app-content">
+        <div className="hero">
           <p className="eyebrow">
             CareerVoice AI
           </p>
 
-          <div className="app-header-controls">
-            <LanguageToggle
-              language={language}
-              onChange={handleLanguageChange}
-            />
+          <h1>
+            {text.app.headline}
+          </h1>
 
-            <span className="account-email">
-              {careerVoiceSession.user.email}
-            </span>
-
-            <button
-              className="secondary-button"
-              type="button"
-              onClick={() => {
-                void handleSignOut()
-              }}
-            >
-              {text.app.signOut}
-            </button>
-          </div>
-        </div>
-
-        {signOutError && (
-          <p className="auth-message auth-message-error">
-            {signOutError}
+          <p className="hero-description">
+            {text.app.description}
           </p>
-        )}
 
-        <h1>
-          {text.app.headline}
-        </h1>
+          <ProfileInputPanel
+            session={careerVoiceSession}
+            language={language}
+            onProfileExtracted={
+              handleProfileExtracted
+            }
+          />
 
-        <p className="hero-description">
-          {text.app.description}
-        </p>
+          {extractedProfile !== null && (
+            <section className="profile-result-preview">
+              <p className="profile-kicker">
+                {text.app.profileExtracted}
+              </p>
 
-        <UsageSummary
-          session={careerVoiceSession}
-          refreshKey={usageRefreshKey}
-          language={language}
-        />
-
-        <ProfileInputPanel
-          session={careerVoiceSession}
-          language={language}
-          onProfileExtracted={
-            handleProfileExtracted
-          }
-        />
-
-        {extractedProfile !== null && (
-          <section className="profile-result-preview">
-            <p className="profile-kicker">
-              {text.app.profileExtracted}
-            </p>
-
-            <h2>
-              {text.app.readyForReview}
-            </h2>
-
-            <p>
-              {
-                extractedProfile.profile
-                  .target_roles.length
-              }
-              {' '}
-              {text.app.targetRoles}
-              {' · '}
-              {
-                extractedProfile.profile
-                  .skills.length
-              }
-              {' '}
-              {text.app.skillsIdentified}
-            </p>
-          </section>
-        )}
-
-        <div className="workflow">
-          <div className="workflow-step">
-            <span className="step-number">
-              1
-            </span>
-
-            <div>
               <h2>
-                {
-                  text.app
-                    .workflowProfileTitle
-                }
+                {text.app.readyForReview}
               </h2>
 
               <p>
                 {
-                  text.app
-                    .workflowProfileDescription
+                  extractedProfile.profile
+                    .target_roles.length
                 }
+                {' '}
+                {text.app.targetRoles}
+                {' · '}
+                {
+                  extractedProfile.profile
+                    .skills.length
+                }
+                {' '}
+                {text.app.skillsIdentified}
               </p>
+            </section>
+          )}
+
+          <div className="workflow">
+            <div className="workflow-step">
+              <span className="step-number">
+                1
+              </span>
+
+              <div>
+                <h2>
+                  {
+                    text.app
+                      .workflowProfileTitle
+                  }
+                </h2>
+
+                <p>
+                  {
+                    text.app
+                      .workflowProfileDescription
+                  }
+                </p>
+              </div>
             </div>
-          </div>
 
-          <div className="workflow-step">
-            <span className="step-number">
-              2
-            </span>
+            <div className="workflow-step">
+              <span className="step-number">
+                2
+              </span>
 
-            <div>
-              <h2>
-                {text.app.workflowJobsTitle}
-              </h2>
+              <div>
+                <h2>
+                  {
+                    text.app
+                      .workflowJobsTitle
+                  }
+                </h2>
 
-              <p>
-                {
-                  text.app
-                    .workflowJobsDescription
-                }
-              </p>
+                <p>
+                  {
+                    text.app
+                      .workflowJobsDescription
+                  }
+                </p>
+              </div>
             </div>
-          </div>
 
-          <div className="workflow-step">
-            <span className="step-number">
-              3
-            </span>
+            <div className="workflow-step">
+              <span className="step-number">
+                3
+              </span>
 
-            <div>
-              <h2>
-                {
-                  text.app
-                    .workflowRecommendationsTitle
-                }
-              </h2>
+              <div>
+                <h2>
+                  {
+                    text.app
+                      .workflowRecommendationsTitle
+                  }
+                </h2>
 
-              <p>
-                {
-                  text.app
-                    .workflowRecommendationsDescription
-                }
-              </p>
+                <p>
+                  {
+                    text.app
+                      .workflowRecommendationsDescription
+                  }
+                </p>
+              </div>
             </div>
           </div>
         </div>

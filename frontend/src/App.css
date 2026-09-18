@@ -6,6 +6,70 @@
   box-sizing: border-box;
 }
 
+.authenticated-shell {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr);
+  background: #f8fafc;
+}
+
+.app-sidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  box-sizing: border-box;
+  overflow-y: auto;
+  padding: 32px 24px;
+  border-right: 1px solid #e5e7eb;
+  background: #ffffff;
+}
+
+.app-content {
+  min-width: 0;
+  padding: 64px 48px;
+}
+
+.app-content .hero {
+  margin: 0 auto;
+}
+
+.sidebar-brand {
+  margin-bottom: 28px;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #111827;
+}
+
+.sidebar-account {
+  margin-top: 32px;
+}
+
+.sidebar-label {
+  margin: 0 0 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #6b7280;
+}
+
+.sidebar-email {
+  margin: 0 0 16px;
+  overflow-wrap: anywhere;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #374151;
+}
+
+.sidebar-sign-out {
+  width: 100%;
+}
+
+.sidebar-divider {
+  height: 1px;
+  margin: 28px 0;
+  background: #e5e7eb;
+}
+
 .hero {
   width: 100%;
   max-width: 880px;
@@ -451,17 +515,6 @@
   background: #4f46e5;
 }
 
-.app-header-controls {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.account-email {
-  font-size: 14px;
-  color: #6b7280;
-}
-
 .auth-page .language-toggle {
   margin-bottom: 44px;
 }
@@ -483,6 +536,62 @@
   margin: 0;
   font-size: 14px;
   color: #6b7280;
+}
+
+.app-sidebar .usage-card {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.app-sidebar .usage-heading {
+  display: block;
+}
+
+.app-sidebar .usage-heading h2 {
+  margin-top: 4px;
+  font-size: 20px;
+}
+
+.app-sidebar .usage-total {
+  margin-top: 8px;
+}
+
+.app-sidebar .usage-details {
+  grid-template-columns: 1fr;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.app-sidebar .usage-details p {
+  padding: 10px 12px;
+}
+
+@media (max-width: 900px) {
+  .authenticated-shell {
+    display: block;
+  }
+
+  .app-sidebar {
+    position: static;
+    width: 100%;
+    height: auto;
+    overflow: visible;
+    padding: 24px 20px;
+    border-right: 0;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  .app-content {
+    padding: 48px 20px;
+  }
+
+  .app-sidebar .usage-details {
+    grid-template-columns:
+      repeat(auto-fit, minmax(160px, 1fr));
+  }
 }
 
 @media (max-width: 640px) {
@@ -515,16 +624,6 @@
 
   .auth-page {
     padding: 48px 20px;
-  }
-
-  .app-header-controls {
-    width: 100%;
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .account-email {
-    overflow-wrap: anywhere;
   }
 
   .auth-resend-row {
