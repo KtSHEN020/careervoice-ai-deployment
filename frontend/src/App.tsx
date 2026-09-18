@@ -2,7 +2,10 @@ import { useState } from 'react'
 
 import './App.css'
 
-import type { ProfileExtractionResponse } from './api/profile'
+import type {
+  CareerProfile,
+  ProfileExtractionResponse,
+} from './api/profile'
 import { signOutCurrentSession } from './auth/authentication'
 import { AuthPanel } from './auth/AuthPanel'
 import type { CareerVoiceSession } from './auth/careervoice-session'
@@ -15,6 +18,7 @@ import {
 import { LanguageToggle } from './LanguageToggle'
 import { AppSidebar } from './layout/AppSidebar'
 import { ProfileInputPanel } from './profile/ProfileInputPanel'
+import { ProfileReviewPanel } from './profile/ProfileReviewPanel'
 
 function App() {
   const [language, setLanguage] =
@@ -38,6 +42,11 @@ function App() {
     )
 
   const [
+    profileConfirmed,
+    setProfileConfirmed,
+  ] = useState(false)
+
+  const [
     usageRefreshKey,
     setUsageRefreshKey,
   ] = useState(0)
@@ -59,10 +68,34 @@ function App() {
     result: ProfileExtractionResponse,
   ) {
     setExtractedProfile(result)
+    setProfileConfirmed(false)
 
     setUsageRefreshKey(
       (current) => current + 1,
     )
+  }
+
+  function handleProfileChange(
+    profile: CareerProfile,
+  ) {
+    setExtractedProfile(
+      (current) => {
+        if (current === null) {
+          return null
+        }
+
+        return {
+          ...current,
+          profile,
+        }
+      },
+    )
+
+    setProfileConfirmed(false)
+  }
+
+  function handleProfileConfirm() {
+    setProfileConfirmed(true)
   }
 
   async function handleSignOut() {
@@ -73,6 +106,7 @@ function App() {
 
       setCareerVoiceSession(null)
       setExtractedProfile(null)
+      setProfileConfirmed(false)
     } catch {
       setSignOutError(
         text.app.signOutError,
@@ -144,31 +178,21 @@ function App() {
           />
 
           {extractedProfile !== null && (
-            <section className="profile-result-preview">
-              <p className="profile-kicker">
-                {text.app.profileExtracted}
-              </p>
-
-              <h2>
-                {text.app.readyForReview}
-              </h2>
-
-              <p>
-                {
-                  extractedProfile.profile
-                    .target_roles.length
-                }
-                {' '}
-                {text.app.targetRoles}
-                {' · '}
-                {
-                  extractedProfile.profile
-                    .skills.length
-                }
-                {' '}
-                {text.app.skillsIdentified}
-              </p>
-            </section>
+            <ProfileReviewPanel
+              profile={
+                extractedProfile.profile
+              }
+              language={language}
+              confirmed={
+                profileConfirmed
+              }
+              onChange={
+                handleProfileChange
+              }
+              onConfirm={
+                handleProfileConfirm
+              }
+            />
           )}
 
           <div className="workflow">

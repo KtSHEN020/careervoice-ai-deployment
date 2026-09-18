@@ -148,6 +148,51 @@ export const UI_TEXT = {
           'Career profile extraction failed. Please try again.',
       },
     },
+
+    profileReview: {
+      kicker: 'Profile review',
+      title: 'Review your career profile',
+      description:
+        'Check the extracted information and correct anything that is missing or inaccurate before continuing.',
+      experienceLevel: 'Experience level',
+      targetRoles: 'Target roles',
+      skills: 'Skills',
+      preferredLocations: 'Preferred locations',
+      preferredWorkTypes: 'Preferred work types',
+      likedAreas: 'Areas you prefer',
+      dislikedAreas: 'Areas you want to avoid',
+      hardConstraints: 'Hard constraints',
+      careerGoals: 'Career goals',
+      notes: 'Other notes',
+      add: 'Add',
+      remove: 'Remove',
+      confirm: 'Confirm profile',
+      confirmed: 'Profile confirmed',
+      confirmationMessage:
+        'Your reviewed profile is ready to be used for job search.',
+      placeholders: {
+        experienceLevel:
+          'For example: Junior, Mid-level, Senior',
+        targetRoles:
+          'Add a target role',
+        skills:
+          'Add a skill',
+        preferredLocations:
+          'Add a preferred location',
+        preferredWorkTypes:
+          'Add a work type',
+        likedAreas:
+          'Add an area you prefer',
+        dislikedAreas:
+          'Add an area you want to avoid',
+        hardConstraints:
+          'Add a non-negotiable requirement',
+        careerGoals:
+          'Add a career goal',
+        notes:
+          'Add another note',
+      },
+    },
   },
 
   'zh-CN': {
@@ -291,6 +336,51 @@ export const UI_TEXT = {
           '职业画像生成服务暂时不可用。',
         generic:
           '职业画像生成失败，请重试。',
+      },
+    },
+
+    profileReview: {
+      kicker: '职业画像复核',
+      title: '检查并修改你的职业画像',
+      description:
+        '在继续之前，请检查提取的信息，并补充或修改任何遗漏或不准确的内容。',
+      experienceLevel: '经验水平',
+      targetRoles: '目标岗位',
+      skills: '技能',
+      preferredLocations: '偏好地区',
+      preferredWorkTypes: '偏好工作方式',
+      likedAreas: '感兴趣的方向',
+      dislikedAreas: '希望避开的方向',
+      hardConstraints: '不可妥协的条件',
+      careerGoals: '职业目标',
+      notes: '其他备注',
+      add: '添加',
+      remove: '删除',
+      confirm: '确认职业画像',
+      confirmed: '职业画像已确认',
+      confirmationMessage:
+        '你已完成职业画像复核，可以用于后续职位搜索。',
+      placeholders: {
+        experienceLevel:
+          '例如：初级、中级、高级',
+        targetRoles:
+          '添加目标岗位',
+        skills:
+          '添加技能',
+        preferredLocations:
+          '添加偏好地区',
+        preferredWorkTypes:
+          '添加工作方式',
+        likedAreas:
+          '添加感兴趣的方向',
+        dislikedAreas:
+          '添加希望避开的方向',
+        hardConstraints:
+          '添加不可妥协的条件',
+        careerGoals:
+          '添加职业目标',
+        notes:
+          '添加其他备注',
       },
     },
   },

@@ -569,6 +569,91 @@
   padding: 10px 12px;
 }
 
+.profile-review-card {
+  margin-bottom: 32px;
+  padding: 28px;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  background: #ffffff;
+}
+
+.profile-review-grid {
+  display: grid;
+  gap: 24px;
+}
+
+.profile-review-field {
+  display: grid;
+  gap: 10px;
+}
+
+.profile-review-field label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.profile-review-field input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  color: #111827;
+  background: #ffffff;
+}
+
+.profile-review-field input:focus {
+  outline: 3px solid rgb(79 70 229 / 15%);
+  border-color: #4f46e5;
+}
+
+.profile-tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.profile-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  padding: 7px 10px;
+  border: 1px solid #dbeafe;
+  border-radius: 999px;
+  background: #eff6ff;
+  font-size: 14px;
+  color: #1e3a8a;
+}
+
+.profile-tag span {
+  overflow-wrap: anywhere;
+}
+
+.profile-tag button {
+  padding: 0;
+  cursor: pointer;
+  border: 0;
+  background: transparent;
+  font-size: 18px;
+  line-height: 1;
+  color: inherit;
+}
+
+.profile-list-input-row {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1fr) auto;
+  gap: 10px;
+}
+
+.profile-review-actions {
+  display: grid;
+  gap: 12px;
+  margin-top: 28px;
+}
+
 @media (max-width: 900px) {
   .authenticated-shell {
     display: block;
@@ -629,5 +714,9 @@
   .auth-resend-row {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .profile-list-input-row {
+    grid-template-columns: 1fr;
   }
 }
