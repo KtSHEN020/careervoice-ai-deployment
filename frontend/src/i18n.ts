@@ -243,6 +243,40 @@ export const UI_TEXT = {
           'Job search failed. Please try again.',
       },
     },
+
+    jobResults: {
+      kicker: 'Search results',
+      title: 'Job listings',
+      found: 'job(s) found',
+      empty:
+        'No matching job listings were returned for this search.',
+      location: 'Location',
+      source: 'Source',
+      requiredSkills: 'Required skills',
+      preferredSkills: 'Preferred skills',
+      responsibilities: 'Responsibilities',
+      description: 'Description',
+      tags: 'Tags',
+      details: 'View job details',
+      viewListing: 'View original listing',
+      adzuna: 'Adzuna',
+
+      workTypes: {
+        remote: 'Remote',
+        hybrid: 'Hybrid',
+        onsite: 'On-site',
+        unknown: 'Work type unknown',
+      },
+
+      seniority: {
+        intern: 'Intern',
+        junior: 'Junior',
+        mid: 'Mid-level',
+        senior: 'Senior',
+        lead: 'Lead',
+        unknown: 'Seniority unknown',
+      },
+    },
   },
 
   'zh-CN': {
@@ -481,6 +515,40 @@ export const UI_TEXT = {
           '职位搜索服务暂时不可用。',
         generic:
           '职位搜索失败，请重试。',
+      },
+    },
+
+    jobResults: {
+      kicker: '搜索结果',
+      title: '职位列表',
+      found: '个职位',
+      empty:
+        '本次搜索没有返回匹配的职位信息。',
+      location: '地区',
+      source: '来源',
+      requiredSkills: '必需技能',
+      preferredSkills: '优先技能',
+      responsibilities: '岗位职责',
+      description: '职位描述',
+      tags: '标签',
+      details: '查看职位详情',
+      viewListing: '查看原始职位页面',
+      adzuna: 'Adzuna',
+
+      workTypes: {
+        remote: '远程',
+        hybrid: '混合办公',
+        onsite: '现场办公',
+        unknown: '工作方式未知',
+      },
+
+      seniority: {
+        intern: '实习',
+        junior: '初级',
+        mid: '中级',
+        senior: '高级',
+        lead: '负责人级别',
+        unknown: '经验级别未知',
       },
     },
   },

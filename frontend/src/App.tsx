@@ -23,6 +23,7 @@ import type {
   JobSearchResponse,
 } from './api/jobs'
 import { JobSearchPanel } from './jobs/JobSearchPanel'
+import { JobResultsPanel } from './jobs/JobResultsPanel'
 
 function App() {
   const [language, setLanguage] =
@@ -282,21 +283,17 @@ function App() {
               onSearchComplete={
                 handleJobSearchComplete
               }
+              onSearchInvalidated={() => {
+                setJobSearchResult(null)
+              }}
             />
           )}
 
           {jobSearchResult !== null && (
-            <section className="job-search-preview">
-              <p className="profile-kicker">
-                {text.jobSearch.title}
-              </p>
-
-              <h2>
-                {jobSearchResult.jobs.length}
-                {' '}
-                {text.jobSearch.found}
-              </h2>
-            </section>
+            <JobResultsPanel
+              jobs={jobSearchResult.jobs}
+              language={language}
+            />
           )}
 
           <div className="workflow">

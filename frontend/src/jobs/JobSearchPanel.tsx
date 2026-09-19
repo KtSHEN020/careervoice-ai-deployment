@@ -28,6 +28,7 @@ interface JobSearchPanelProps {
   onSearchComplete: (
     result: JobSearchResponse,
   ) => void
+  onSearchInvalidated: () => void
 }
 
 function jobSearchErrorMessage(
@@ -63,6 +64,7 @@ export function JobSearchPanel({
   profile,
   language,
   onSearchComplete,
+  onSearchInvalidated,
 }: JobSearchPanelProps) {
   const text =
     UI_TEXT[language].jobSearch
@@ -80,9 +82,6 @@ export function JobSearchPanel({
   const [statusMessage, setStatusMessage] =
     useState('')
 
-  const [resultCount, setResultCount] =
-    useState<number | null>(null)
-
   function updateRole(
     index: number,
     value: string,
@@ -97,7 +96,7 @@ export function JobSearchPanel({
       ),
     }))
 
-    setResultCount(null)
+    onSearchInvalidated()
   }
 
   function addRole() {
@@ -116,7 +115,7 @@ export function JobSearchPanel({
       ],
     }))
 
-    setResultCount(null)
+    onSearchInvalidated()
   }
 
   function removeRole(
@@ -130,7 +129,7 @@ export function JobSearchPanel({
       ),
     }))
 
-    setResultCount(null)
+    onSearchInvalidated()
   }
 
   async function handleSubmit(
@@ -140,7 +139,7 @@ export function JobSearchPanel({
 
     setErrorMessage('')
     setStatusMessage('')
-    setResultCount(null)
+    onSearchInvalidated()
 
     const roles =
       normalizeSearchRoles(
@@ -207,10 +206,6 @@ export function JobSearchPanel({
         source:
           result.settings.source,
       }))
-
-      setResultCount(
-        result.jobs.length,
-      )
 
       setStatusMessage(
         text.success,
@@ -338,7 +333,7 @@ export function JobSearchPanel({
                     event.target.value,
                 }))
 
-                setResultCount(null)
+                onSearchInvalidated()
               }}
             />
 
@@ -371,7 +366,7 @@ export function JobSearchPanel({
                     ),
                 }))
 
-                setResultCount(null)
+                onSearchInvalidated()
               }}
             />
 
@@ -400,16 +395,6 @@ export function JobSearchPanel({
         {statusMessage && (
           <p className="profile-message profile-message-success">
             {statusMessage}
-          </p>
-        )}
-
-        {resultCount !== null && (
-          <p className="job-search-result-count">
-            <strong>
-              {resultCount}
-            </strong>
-            {' '}
-            {text.found}
           </p>
         )}
 
