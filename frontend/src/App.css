@@ -942,6 +942,79 @@
   font-weight: 600;
 }
 
+.recommendation-card,
+.recommendation-preview {
+  margin-bottom: 32px;
+  padding: 28px;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  background: #ffffff;
+}
+
+.recommendation-card h2,
+.recommendation-preview h2 {
+  margin: 0;
+  color: #111827;
+}
+
+.recommendation-form {
+  display: grid;
+  gap: 22px;
+}
+
+.recommendation-field {
+  display: grid;
+  gap: 8px;
+}
+
+.recommendation-field label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.recommendation-field input,
+.recommendation-field select {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  color: #111827;
+  background: #ffffff;
+}
+
+.recommendation-help {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #6b7280;
+}
+
+.recommendation-checkbox {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  cursor: pointer;
+}
+
+.recommendation-checkbox input {
+  width: auto;
+  margin-top: 4px;
+}
+
+.recommendation-checkbox > span {
+  display: grid;
+  gap: 5px;
+}
+
+.recommendation-checkbox-help {
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.5;
+  color: #6b7280;
+}
+
 @media (max-width: 900px) {
   .authenticated-shell,
   .authenticated-shell-sidebar-closed {

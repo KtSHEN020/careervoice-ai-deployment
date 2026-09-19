@@ -277,6 +277,49 @@ export const UI_TEXT = {
         unknown: 'Seniority unknown',
       },
     },
+
+    recommendations: {
+      kicker: 'Step 3',
+      title: 'Generate recommendations',
+      description:
+        'Rank the jobs you found against your reviewed career profile.',
+      rankingMethod: 'Ranking method',
+      standard: 'Standard',
+      aiAssisted: 'AI-assisted',
+      standardHelp:
+        'Uses CareerVoice matching rules and does not consume AI units.',
+      aiHelp:
+        'Uses AI-assisted ranking and consumes 10 AI units for each ranking run.',
+      maxResults: 'Recommendations to return',
+      maxResultsHelp:
+        'Choose how many of the highest-ranked jobs to return, up to 10.',
+      excludeRejected:
+        'Exclude jobs rejected by hard constraints',
+      excludeRejectedHelp:
+        'When enabled, jobs that conflict with your non-negotiable requirements will not be returned.',
+      generate: 'Generate recommendations',
+      generating: 'Generating recommendations…',
+      success: 'Recommendations generated successfully.',
+      returned: 'recommendation(s) returned.',
+      errors: {
+        invalidResults:
+          'The number of recommendations must be between 1 and 10.',
+        expired:
+          'Your session has expired. Please sign in again.',
+        denied:
+          'Your account is not allowed to perform this action.',
+        invalid:
+          'The recommendation settings could not be processed. Check them and try again.',
+        quota:
+          'You do not have enough AI allowance remaining for AI-assisted ranking.',
+        unavailable:
+          'Recommendation generation is temporarily unavailable.',
+        generic:
+          'Recommendation generation failed. Please try again.',
+      },
+      availableJobs: 'Available jobs',
+      maximumRecommendations: 'Maximum recommendations',
+    },
   },
 
   'zh-CN': {
@@ -550,6 +593,49 @@ export const UI_TEXT = {
         lead: '负责人级别',
         unknown: '经验级别未知',
       },
+    },
+
+    recommendations: {
+      kicker: '步骤 3',
+      title: '生成职位推荐',
+      description:
+        '根据已确认的职业画像，对搜索到的职位进行匹配和排序。',
+      rankingMethod: '排序方式',
+      standard: '标准',
+      aiAssisted: 'AI 辅助',
+      standardHelp:
+        '使用 CareerVoice 的匹配规则，不消耗 AI 单位。',
+      aiHelp:
+        '使用 AI 辅助排序，每次排序消耗 10 个 AI 单位。',
+      maxResults: '返回的推荐数量',
+      maxResultsHelp:
+        '选择返回多少个排名最高的职位，最多 10 个。',
+      excludeRejected:
+        '排除违反不可妥协条件的职位',
+      excludeRejectedHelp:
+        '启用后，与不可妥协条件冲突的职位不会出现在推荐结果中。',
+      generate: '生成职位推荐',
+      generating: '正在生成推荐…',
+      success: '职位推荐生成成功。',
+      returned: '个推荐职位。',
+      errors: {
+        invalidResults:
+          '推荐数量必须在 1 至 10 之间。',
+        expired:
+          '登录状态已失效，请重新登录。',
+        denied:
+          '你的账号目前无法执行此操作。',
+        invalid:
+          '无法处理这些推荐设置，请检查后重试。',
+        quota:
+          '当前剩余 AI 额度不足以进行 AI 辅助排序。',
+        unavailable:
+          '职位推荐服务暂时不可用。',
+        generic:
+          '职位推荐生成失败，请重试。',
+      },
+      availableJobs: '可用职位',
+      maximumRecommendations: '最多推荐数量',
     },
   },
 } as const

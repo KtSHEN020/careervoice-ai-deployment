@@ -24,6 +24,10 @@ import type {
 } from './api/jobs'
 import { JobSearchPanel } from './jobs/JobSearchPanel'
 import { JobResultsPanel } from './jobs/JobResultsPanel'
+import type {
+  RecommendationResponse,
+} from './api/recommendations'
+import { RecommendationPanel } from './recommendations/RecommendationPanel'
 
 function App() {
   const [language, setLanguage] =
@@ -57,6 +61,14 @@ function App() {
   ] = useState<JobSearchResponse | null>(
     null,
   )
+
+  const [
+    recommendationResult,
+    setRecommendationResult,
+  ] =
+    useState<RecommendationResponse | null>(
+      null,
+    )
 
   const [
     usageRefreshKey,
@@ -97,6 +109,7 @@ function App() {
     setExtractedProfile(result)
     setProfileConfirmed(false)
     setJobSearchResult(null)
+    setRecommendationResult(null)
 
     setUsageRefreshKey(
       (current) => current + 1,
@@ -121,12 +134,24 @@ function App() {
 
     setProfileConfirmed(false)
     setJobSearchResult(null)
+    setRecommendationResult(null)
   }
 
   function handleJobSearchComplete(
     result: JobSearchResponse,
   ) {
     setJobSearchResult(result)
+    setRecommendationResult(null)
+
+    setUsageRefreshKey(
+      (current) => current + 1,
+    )
+  }
+
+  function handleRecommendationComplete(
+    result: RecommendationResponse,
+  ) {
+    setRecommendationResult(result)
 
     setUsageRefreshKey(
       (current) => current + 1,
@@ -148,6 +173,7 @@ function App() {
       setProfileConfirmed(false)
       setJobSearchResult(null)
       setSidebarOpen(true)
+      setRecommendationResult(null)
     } catch {
       setSignOutError(
         text.app.signOutError,
@@ -195,6 +221,7 @@ function App() {
             usageRefreshKey
           }
           signOutError={signOutError}
+          isOpen={sidebarOpen}
           onLanguageChange={
             handleLanguageChange
           }
@@ -285,6 +312,7 @@ function App() {
               }
               onSearchInvalidated={() => {
                 setJobSearchResult(null)
+                setRecommendationResult(null)
               }}
             />
           )}
@@ -294,6 +322,49 @@ function App() {
               jobs={jobSearchResult.jobs}
               language={language}
             />
+          )}
+
+          {jobSearchResult !== null
+            && jobSearchResult.jobs.length > 0 && (
+            <RecommendationPanel
+              session={careerVoiceSession}
+              profile={
+                extractedProfile!.profile
+              }
+              jobs={
+                jobSearchResult.jobs
+              }
+              language={language}
+              onComplete={
+                handleRecommendationComplete
+              }
+              onInvalidated={() => {
+                setRecommendationResult(null)
+              }}
+            />
+          )}
+
+          {recommendationResult !== null && (
+            <section className="recommendation-preview">
+              <p className="profile-kicker">
+                {
+                  text.recommendations
+                    .title
+                }
+              </p>
+
+              <h2>
+                {
+                  recommendationResult
+                    .recommendations.length
+                }
+                {' '}
+                {
+                  text.recommendations
+                    .returned
+                }
+              </h2>
+            </section>
           )}
 
           <div className="workflow">

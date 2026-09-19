@@ -11,6 +11,7 @@ interface AppSidebarProps {
   language: AppLanguage
   usageRefreshKey: number
   signOutError: string
+  isOpen: boolean
   onLanguageChange: (
     language: AppLanguage,
   ) => void
@@ -23,6 +24,7 @@ export function AppSidebar({
   language,
   usageRefreshKey,
   signOutError,
+  isOpen,
   onLanguageChange,
   onSignOut,
   onClose,
@@ -30,7 +32,10 @@ export function AppSidebar({
   const text = UI_TEXT[language]
 
   return (
-    <aside className="app-sidebar">
+    <aside
+      className="app-sidebar"
+      hidden={!isOpen}
+    >
       <div className="sidebar-header">
         <div className="sidebar-brand">
           CareerVoice AI
