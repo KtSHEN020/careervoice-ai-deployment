@@ -198,6 +198,51 @@ export const UI_TEXT = {
           'Add another note',
       },
     },
+
+    jobSearch: {
+      kicker: 'Step 2',
+      title: 'Search for jobs',
+      description:
+        'Review the search settings generated from your confirmed career profile, then search for current job listings.',
+      roles: 'Search roles',
+      rolesHelp:
+        'You can search for up to 3 roles. These are initially taken from your confirmed target roles.',
+      role: 'Role',
+      addRole: 'Add role',
+      removeRole: 'Remove',
+      location: 'Location',
+      locationPlaceholder:
+        'For example: Adelaide',
+      locationHelp:
+        'Leave this blank if you do not want to restrict the search by location.',
+      resultsPerRole: 'Results per role',
+      resultsHelp:
+        'Choose between 1 and 10 listings for each role.',
+      source: 'Job source',
+      adzuna: 'Adzuna',
+      search: 'Search jobs',
+      searching: 'Searching…',
+      success: 'Job search completed.',
+      found: 'job(s) found.',
+      errors: {
+        noRoles:
+          'Add at least one search role before continuing.',
+        tooManyRoles:
+          'You can search for at most 3 roles.',
+        invalidResults:
+          'Results per role must be between 1 and 10.',
+        expired:
+          'Your session has expired. Please sign in again.',
+        denied:
+          'Your account is not allowed to perform this action.',
+        invalid:
+          'The job-search settings could not be processed. Check them and try again.',
+        unavailable:
+          'Job search is temporarily unavailable.',
+        generic:
+          'Job search failed. Please try again.',
+      },
+    },
   },
 
   'zh-CN': {
@@ -391,6 +436,51 @@ export const UI_TEXT = {
           '添加职业目标',
         notes:
           '添加其他备注',
+      },
+    },
+
+    jobSearch: {
+      kicker: '步骤 2',
+      title: '搜索职位',
+      description:
+        '检查根据已确认职业画像生成的搜索设置，然后搜索当前职位信息。',
+      roles: '搜索岗位',
+      rolesHelp:
+        '最多可以搜索 3 个岗位。初始内容来自你已确认的目标岗位。',
+      role: '岗位',
+      addRole: '添加岗位',
+      removeRole: '删除',
+      location: '地区',
+      locationPlaceholder:
+        '例如：Adelaide',
+      locationHelp:
+        '如果不希望按地区限制搜索，可以留空。',
+      resultsPerRole: '每个岗位的结果数量',
+      resultsHelp:
+        '每个岗位可以搜索 1 至 10 条职位信息。',
+      source: '职位来源',
+      adzuna: 'Adzuna',
+      search: '搜索职位',
+      searching: '正在搜索…',
+      success: '职位搜索完成。',
+      found: '个职位已找到。',
+      errors: {
+        noRoles:
+          '继续之前，请至少添加一个搜索岗位。',
+        tooManyRoles:
+          '最多只能搜索 3 个岗位。',
+        invalidResults:
+          '每个岗位的结果数量必须在 1 至 10 之间。',
+        expired:
+          '登录状态已失效，请重新登录。',
+        denied:
+          '你的账号目前无法执行此操作。',
+        invalid:
+          '无法处理这些职位搜索设置，请检查后重试。',
+        unavailable:
+          '职位搜索服务暂时不可用。',
+        generic:
+          '职位搜索失败，请重试。',
       },
     },
   },

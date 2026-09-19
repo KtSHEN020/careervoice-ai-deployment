@@ -702,6 +702,105 @@
   display: none;
 }
 
+.job-search-card,
+.job-search-preview {
+  margin-bottom: 32px;
+  padding: 28px;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  background: #ffffff;
+}
+
+.job-search-card h2,
+.job-search-preview h2 {
+  margin: 0;
+  color: #111827;
+}
+
+.job-search-form {
+  display: grid;
+  gap: 24px;
+}
+
+.job-search-fieldset {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.job-search-fieldset legend,
+.job-search-field label,
+.job-role-row label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.job-search-help {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #6b7280;
+}
+
+.job-role-list {
+  display: grid;
+  gap: 14px;
+}
+
+.job-role-row {
+  display: grid;
+  gap: 8px;
+}
+
+.job-role-input-row {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1fr) auto;
+  gap: 10px;
+}
+
+.job-search-settings {
+  display: grid;
+  grid-template-columns:
+    repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.job-search-field {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+}
+
+.job-search-card input,
+.job-search-card select {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  color: #111827;
+  background: #ffffff;
+}
+
+.job-search-card input:focus,
+.job-search-card select:focus {
+  outline: 3px solid rgb(79 70 229 / 15%);
+  border-color: #4f46e5;
+}
+
+.job-add-role-button {
+  justify-self: start;
+}
+
+.job-search-result-count {
+  margin: 0;
+  color: #374151;
+}
+
 @media (max-width: 900px) {
   .authenticated-shell,
   .authenticated-shell-sidebar-closed {
@@ -785,6 +884,11 @@
   }
 
   .profile-list-input-row {
+    grid-template-columns: 1fr;
+  }
+
+  .job-role-input-row,
+  .job-search-settings {
     grid-template-columns: 1fr;
   }
 }

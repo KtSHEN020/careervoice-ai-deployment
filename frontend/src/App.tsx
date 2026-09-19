@@ -19,6 +19,10 @@ import { LanguageToggle } from './LanguageToggle'
 import { AppSidebar } from './layout/AppSidebar'
 import { ProfileInputPanel } from './profile/ProfileInputPanel'
 import { ProfileReviewPanel } from './profile/ProfileReviewPanel'
+import type {
+  JobSearchResponse,
+} from './api/jobs'
+import { JobSearchPanel } from './jobs/JobSearchPanel'
 
 function App() {
   const [language, setLanguage] =
@@ -45,6 +49,13 @@ function App() {
     profileConfirmed,
     setProfileConfirmed,
   ] = useState(false)
+
+  const [
+    jobSearchResult,
+    setJobSearchResult,
+  ] = useState<JobSearchResponse | null>(
+    null,
+  )
 
   const [
     usageRefreshKey,
@@ -84,6 +95,7 @@ function App() {
   ) {
     setExtractedProfile(result)
     setProfileConfirmed(false)
+    setJobSearchResult(null)
 
     setUsageRefreshKey(
       (current) => current + 1,
@@ -107,6 +119,17 @@ function App() {
     )
 
     setProfileConfirmed(false)
+    setJobSearchResult(null)
+  }
+
+  function handleJobSearchComplete(
+    result: JobSearchResponse,
+  ) {
+    setJobSearchResult(result)
+
+    setUsageRefreshKey(
+      (current) => current + 1,
+    )
   }
 
   function handleProfileConfirm() {
@@ -122,6 +145,7 @@ function App() {
       setCareerVoiceSession(null)
       setExtractedProfile(null)
       setProfileConfirmed(false)
+      setJobSearchResult(null)
       setSidebarOpen(true)
     } catch {
       setSignOutError(
@@ -245,6 +269,34 @@ function App() {
                 handleProfileConfirm
               }
             />
+          )}
+
+          {extractedProfile !== null
+            && profileConfirmed && (
+            <JobSearchPanel
+              session={careerVoiceSession}
+              profile={
+                extractedProfile.profile
+              }
+              language={language}
+              onSearchComplete={
+                handleJobSearchComplete
+              }
+            />
+          )}
+
+          {jobSearchResult !== null && (
+            <section className="job-search-preview">
+              <p className="profile-kicker">
+                {text.jobSearch.title}
+              </p>
+
+              <h2>
+                {jobSearchResult.jobs.length}
+                {' '}
+                {text.jobSearch.found}
+              </h2>
+            </section>
           )}
 
           <div className="workflow">
