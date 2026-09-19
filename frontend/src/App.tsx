@@ -28,6 +28,9 @@ import type {
   RecommendationResponse,
 } from './api/recommendations'
 import { RecommendationPanel } from './recommendations/RecommendationPanel'
+import {
+  RecommendationResultsPanel,
+} from './recommendations/RecommendationResultsPanel'
 
 function App() {
   const [language, setLanguage] =
@@ -213,26 +216,24 @@ function App() {
           : 'authenticated-shell authenticated-shell-sidebar-closed'
       }
     >
-      {sidebarOpen && (
-        <AppSidebar
-          session={careerVoiceSession}
-          language={language}
-          usageRefreshKey={
-            usageRefreshKey
-          }
-          signOutError={signOutError}
-          isOpen={sidebarOpen}
-          onLanguageChange={
-            handleLanguageChange
-          }
-          onSignOut={() => {
-            void handleSignOut()
-          }}
-          onClose={() => {
-            setSidebarOpen(false)
-          }}
-        />
-      )}
+      <AppSidebar
+        session={careerVoiceSession}
+        language={language}
+        usageRefreshKey={
+          usageRefreshKey
+        }
+        signOutError={signOutError}
+        isOpen={sidebarOpen}
+        onLanguageChange={
+          handleLanguageChange
+        }
+        onSignOut={() => {
+          void handleSignOut()
+        }}
+        onClose={() => {
+          setSidebarOpen(false)
+        }}
+      />
 
       {!sidebarOpen && (
         <button
@@ -345,26 +346,10 @@ function App() {
           )}
 
           {recommendationResult !== null && (
-            <section className="recommendation-preview">
-              <p className="profile-kicker">
-                {
-                  text.recommendations
-                    .title
-                }
-              </p>
-
-              <h2>
-                {
-                  recommendationResult
-                    .recommendations.length
-                }
-                {' '}
-                {
-                  text.recommendations
-                    .returned
-                }
-              </h2>
-            </section>
+            <RecommendationResultsPanel
+              result={recommendationResult}
+              language={language}
+            />
           )}
 
           <div className="workflow">

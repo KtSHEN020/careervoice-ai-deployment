@@ -320,6 +320,29 @@ export const UI_TEXT = {
       availableJobs: 'Available jobs',
       maximumRecommendations: 'Maximum recommendations',
     },
+
+    recommendationResults: {
+      kicker: 'Recommendations',
+      title: 'Your recommended jobs',
+      returned: 'recommendation(s)',
+      jobsScored: 'Jobs evaluated',
+      jobsScoredWithAi: 'Jobs evaluated with AI',
+      rankingMethod: 'Ranking method',
+      standard: 'Standard',
+      aiAssisted: 'AI-assisted',
+      rank: 'Rank',
+      matchScore: 'Match score',
+      reasons: 'Why this job matches',
+      missingSkills: 'Missing skills',
+      penalties: 'Match concerns',
+      uncertainties: 'Uncertainties',
+      constraintConflict:
+        'Hard-constraint conflict',
+      constraintConflictDescription:
+        'This job conflicts with one or more of your non-negotiable requirements.',
+      empty:
+        'No recommendations were returned with the current settings.',
+    },
   },
 
   'zh-CN': {
@@ -636,6 +659,29 @@ export const UI_TEXT = {
       },
       availableJobs: '可用职位',
       maximumRecommendations: '最多推荐数量',
+    },
+
+    recommendationResults: {
+      kicker: '职位推荐',
+      title: '为你推荐的职位',
+      returned: '个推荐职位',
+      jobsScored: '已评估职位',
+      jobsScoredWithAi: 'AI 已评估职位',
+      rankingMethod: '排序方式',
+      standard: '标准',
+      aiAssisted: 'AI 辅助',
+      rank: '排名',
+      matchScore: '匹配分数',
+      reasons: '推荐原因',
+      missingSkills: '缺失技能',
+      penalties: '匹配风险',
+      uncertainties: '不确定信息',
+      constraintConflict:
+        '存在不可妥协条件冲突',
+      constraintConflictDescription:
+        '此职位与你的一项或多项不可妥协要求存在冲突。',
+      empty:
+        '当前设置下没有返回推荐职位。',
     },
   },
 } as const
