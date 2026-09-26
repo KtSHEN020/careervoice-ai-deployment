@@ -278,3 +278,45 @@ def test_persistent_budget_reports_database_status() -> None:
             "usage_date": usage_date,
         }
     ]
+
+
+def test_status_marks_quota_exempt_user() -> None:
+    usage_date = date(2026, 9, 25)
+
+    user = AppUser(
+        id=uuid4(),
+        email="admin@example.com",
+        auth_provider="supabase",
+        auth_subject="admin-auth-subject",
+        ai_quota_exempt=True,
+    )
+
+    repository = FakeUsageRepository(
+        UsageDecision(
+            allowed=True,
+            ai_units_used=75,
+            remaining_ai_units=0,
+        ),
+        snapshot=DailyUsageSnapshot(
+            user_id=user.id,
+            usage_date=usage_date,
+            ai_units_used=75,
+            ai_profile_extractions=5,
+            voice_transcriptions=2,
+            document_recognitions=1,
+            ai_ranking_runs=6,
+            job_searches=8,
+        ),
+    )
+
+    budget = PersistentAIUsageBudget(
+        repository=repository,  # type: ignore[arg-type]
+        user=user,
+        usage_date_factory=lambda: usage_date,
+    )
+
+    status = budget.status()
+
+    assert status.quota_exempt is True
+    assert status.used == 75
+    assert status.remaining == 0

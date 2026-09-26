@@ -39,7 +39,8 @@ class PostgresAppUserRepository:
                         email,
                         auth_provider,
                         auth_subject,
-                        enabled
+                        enabled,
+                        ai_quota_exempt
                     from public.find_app_user_by_identity(
                         %s,
                         %s
@@ -62,6 +63,9 @@ class PostgresAppUserRepository:
             auth_provider=row["auth_provider"],
             auth_subject=row["auth_subject"],
             enabled=row["enabled"],
+            ai_quota_exempt=(
+                row["ai_quota_exempt"]
+            ),
         )
 
     def add(
@@ -78,9 +82,10 @@ class PostgresAppUserRepository:
                         email,
                         auth_provider,
                         auth_subject,
-                        enabled
+                        enabled,
+                        ai_quota_exempt
                     )
-                    values (%s, %s, %s, %s, %s)
+                    values (%s, %s, %s, %s, %s, %s)
                     """,
                     (
                         user.id,
@@ -88,6 +93,7 @@ class PostgresAppUserRepository:
                         user.auth_provider,
                         user.auth_subject,
                         user.enabled,
+                        user.ai_quota_exempt,
                     ),
                 )
 

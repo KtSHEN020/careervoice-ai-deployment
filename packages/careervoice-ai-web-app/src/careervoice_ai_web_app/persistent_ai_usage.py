@@ -56,6 +56,7 @@ class PersistentAIUsageBudget:
                 0,
                 self.limit - usage.ai_units_used,
             ),
+            quota_exempt=self.user.ai_quota_exempt,
             profile_extractions=(
                 usage.ai_profile_extractions
             ),

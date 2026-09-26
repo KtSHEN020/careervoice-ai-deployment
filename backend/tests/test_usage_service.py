@@ -86,6 +86,7 @@ def test_usage_service_returns_daily_status() -> None:
     ) == DailyUsageStatus(
         usage_date=usage_date,
         daily_ai_unit_limit=40,
+        ai_quota_exempt=False,
         ai_units_used=11,
         remaining_ai_units=29,
         ai_profile_extractions=1,
@@ -199,3 +200,42 @@ def test_usage_service_requires_positive_limit(
             repository=repository,
             daily_ai_unit_limit=daily_ai_unit_limit,  # type: ignore[arg-type]
         )
+
+
+def test_usage_service_reports_quota_exempt_user_as_unlimited() -> None:
+    usage_date = date(2026, 9, 12)
+
+    user = AppUser(
+        id=TEST_USER_ID,
+        email="admin@example.com",
+        auth_provider="supabase",
+        auth_subject="provider-admin-123",
+        enabled=True,
+        ai_quota_exempt=True,
+    )
+
+    repository = FakeDailyUsageReader(
+        DailyUsageSnapshot(
+            user_id=user.id,
+            usage_date=usage_date,
+            ai_units_used=75,
+            ai_profile_extractions=5,
+            voice_transcriptions=2,
+            document_recognitions=1,
+            ai_ranking_runs=6,
+            job_searches=8,
+        )
+    )
+
+    service = DailyUsageService(
+        repository=repository,
+        daily_ai_unit_limit=40,
+        usage_date_factory=lambda: usage_date,
+    )
+
+    status = service.get_status(user)
+
+    assert status.daily_ai_unit_limit == 40
+    assert status.ai_quota_exempt is True
+    assert status.ai_units_used == 75
+    assert status.remaining_ai_units is None

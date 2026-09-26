@@ -90,6 +90,7 @@ class AppUser:
     auth_provider: str
     auth_subject: str
     enabled: bool = True
+    ai_quota_exempt: bool = False
 
     def __post_init__(self) -> None:
         if not isinstance(self.id, UUID):
@@ -113,6 +114,13 @@ class AppUser:
 
         if not isinstance(self.enabled, bool):
             raise ValueError("User enabled state must be boolean.")
+        if not isinstance(
+            self.ai_quota_exempt,
+            bool,
+        ):
+            raise ValueError(
+                "AI quota exemption state must be boolean."
+            )
 
     def matches_identity(
         self,

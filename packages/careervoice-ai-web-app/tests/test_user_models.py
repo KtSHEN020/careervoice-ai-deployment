@@ -115,3 +115,40 @@ def test_app_user_rejects_non_uuid_id() -> None:
             auth_provider="supabase",
             auth_subject="auth-user-123",
         )
+
+
+def test_app_user_is_not_quota_exempt_by_default() -> None:
+    user = AppUser(
+        id=uuid4(),
+        email="tester@example.com",
+        auth_provider="supabase",
+        auth_subject="auth-user-123",
+    )
+
+    assert user.ai_quota_exempt is False
+
+
+def test_app_user_can_be_quota_exempt() -> None:
+    user = AppUser(
+        id=uuid4(),
+        email="admin@example.com",
+        auth_provider="supabase",
+        auth_subject="auth-admin-123",
+        ai_quota_exempt=True,
+    )
+
+    assert user.ai_quota_exempt is True
+
+
+def test_app_user_rejects_non_boolean_quota_exemption() -> None:
+    with pytest.raises(
+        ValueError,
+        match="exemption state must be boolean",
+    ):
+        AppUser(
+            id=uuid4(),
+            email="tester@example.com",
+            auth_provider="supabase",
+            auth_subject="auth-user-123",
+            ai_quota_exempt="yes",  # type: ignore[arg-type]
+        )

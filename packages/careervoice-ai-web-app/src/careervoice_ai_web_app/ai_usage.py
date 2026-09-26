@@ -28,6 +28,7 @@ class AIUsageStatus:
     limit: int
     used: int
     remaining: int
+    quota_exempt: bool = False
     profile_extractions: int = 0
     voice_transcriptions: int = 0
     document_recognitions: int = 0

@@ -498,39 +498,57 @@ def _render_ai_usage_status(
         )
         return
 
-    if status.limit > 0:
-        progress = min(
-            1.0,
-            max(
-                0.0,
-                status.used / status.limit,
-            ),
+    if status.quota_exempt:
+        st.sidebar.write(
+            "**"
+            + translate(
+                language,
+                "quota.unlimited",
+            )
+            + "**"
+        )
+
+        st.sidebar.write(
+            translate(
+                language,
+                "quota.used_unlimited",
+                used=status.used,
+            )
         )
     else:
-        progress = 0.0
+        if status.limit > 0:
+            progress = min(
+                1.0,
+                max(
+                    0.0,
+                    status.used / status.limit,
+                ),
+            )
+        else:
+            progress = 0.0
 
-    st.sidebar.write(
-        "**"
-        + translate(
-            language,
-            "quota.used",
-            used=status.used,
-            limit=status.limit,
+        st.sidebar.write(
+            "**"
+            + translate(
+                language,
+                "quota.used",
+                used=status.used,
+                limit=status.limit,
+            )
+            + "**"
         )
-        + "**"
-    )
 
-    st.sidebar.progress(
-        progress
-    )
-
-    st.sidebar.caption(
-        translate(
-            language,
-            "quota.remaining",
-            remaining=status.remaining,
+        st.sidebar.progress(
+            progress
         )
-    )
+
+        st.sidebar.caption(
+            translate(
+                language,
+                "quota.remaining",
+                remaining=status.remaining,
+            )
+        )
 
     st.sidebar.markdown(
         "**"

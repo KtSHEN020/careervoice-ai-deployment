@@ -107,6 +107,7 @@ def test_find_by_identity_returns_user() -> None:
             "auth_provider": "supabase",
             "auth_subject": "auth-user-123",
             "enabled": True,
+            "ai_quota_exempt": True,
         }
     )
 
@@ -122,6 +123,7 @@ def test_find_by_identity_returns_user() -> None:
         auth_provider="supabase",
         auth_subject="auth-user-123",
         enabled=True,
+        ai_quota_exempt=True,
     )
 
     query, params = connection.cursor_instance.executions[0]
@@ -170,6 +172,7 @@ def test_add_inserts_user() -> None:
         user.auth_provider,
         user.auth_subject,
         True,
+        False,
     )
 
 

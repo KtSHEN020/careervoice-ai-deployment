@@ -48,8 +48,9 @@ class DailyUsageStatus:
 
     usage_date: date
     daily_ai_unit_limit: int
+    ai_quota_exempt: bool
     ai_units_used: int
-    remaining_ai_units: int
+    remaining_ai_units: int | None
     ai_profile_extractions: int
     voice_transcriptions: int
     document_recognitions: int
@@ -87,15 +88,22 @@ class DailyUsageService:
             usage_date=usage_date,
         )
 
-        return DailyUsageStatus(
-            usage_date=usage_date,
-            daily_ai_unit_limit=self.daily_ai_unit_limit,
-            ai_units_used=usage.ai_units_used,
-            remaining_ai_units=max(
+        remaining_ai_units = (
+            None
+            if user.ai_quota_exempt
+            else max(
                 0,
                 self.daily_ai_unit_limit
                 - usage.ai_units_used,
-            ),
+            )
+        )
+
+        return DailyUsageStatus(
+            usage_date=usage_date,
+            daily_ai_unit_limit=self.daily_ai_unit_limit,
+            ai_quota_exempt=user.ai_quota_exempt,
+            ai_units_used=usage.ai_units_used,
+            remaining_ai_units=remaining_ai_units,
             ai_profile_extractions=(
                 usage.ai_profile_extractions
             ),

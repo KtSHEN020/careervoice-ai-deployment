@@ -147,17 +147,34 @@ export function UsageSummary({
           </p>
 
           <h2>
-            {usage.remaining_ai_units}{' '}
-            {text.remaining}
+            {usage.ai_quota_exempt
+              ? text.unlimited
+              : (
+                <>
+                  {
+                    usage
+                      .remaining_ai_units
+                  }
+                  {' '}
+                  {text.remaining}
+                </>
+              )}
           </h2>
         </div>
 
         <p className="usage-total">
           {usage.ai_units_used}
-          {' / '}
-          {usage.daily_ai_unit_limit}
           {' '}
-          {text.used}
+          {usage.ai_quota_exempt ? (
+            text.unitsUsed
+          ) : (
+            <>
+              {'/ '}
+              {usage.daily_ai_unit_limit}
+              {' '}
+              {text.used}
+            </>
+          )}
         </p>
       </div>
 
