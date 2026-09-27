@@ -11,12 +11,21 @@ export const UI_TEXT = {
     sidebar: {
       show: 'Show sidebar',
       hide: 'Hide sidebar',
+      navigation: 'Workflow',
+      profile: 'Profile',
+      jobs: 'Jobs',
+      matches: 'Matches',
+      account: 'Account',
+    },
+
+    navigation: {
+      backToProfile: '← Back to Profile',
+      nextToJobs: 'Next: Jobs →',
+      backToJobs: '← Back to Jobs',
+      nextToMatches: 'Next: Matches →',
     },
 
     app: {
-      headline: 'Find roles that fit your career goals',
-      description:
-        'Build your career profile, search for relevant jobs, and get personalized recommendations based on your skills and preferences.',
       signOut: 'Sign out',
       signingOut: 'Signing out…',
       signOutError: 'Sign out failed. Please try again.',
@@ -24,16 +33,8 @@ export const UI_TEXT = {
       readyForReview: 'Ready for review',
       targetRoles: 'target role(s)',
       skillsIdentified: 'skill(s) identified.',
-      workflowProfileTitle: 'Build your career profile',
-      workflowProfileDescription:
-        'Tell us about your skills, preferences, and career goals.',
-      workflowJobsTitle: 'Search for jobs',
-      workflowJobsDescription:
-        'Search across the roles and locations you are interested in.',
-      workflowRecommendationsTitle:
-        'Get personalized recommendations',
-      workflowRecommendationsDescription:
-        'Compare jobs using match explanations, missing skills, and preference-aware scoring.',
+      productSummary:
+      'Build a profile, find jobs, and compare personalized matches.',
     },
 
     auth: {
@@ -128,16 +129,16 @@ export const UI_TEXT = {
       step: 'Step 1',
       title: 'Build your career profile',
       description:
-        'Describe your experience, skills, preferred roles, locations, work preferences, and career goals.',
+        'Add your experience, skills, preferences, and career goals.',
       information: 'Career information',
       placeholder:
-        'For example: I am a junior software developer with Python and React experience. I am looking for backend or full-stack roles in Adelaide...',
+        'For example: Junior software developer with Python and React experience, looking for backend roles in Adelaide.',
       extractionMethod: 'Profile extraction',
       standard: 'Standard',
       aiAssisted: 'AI-assisted',
       extract: 'Extract career profile',
       extracting: 'Extracting profile…',
-      success: 'Career profile extracted successfully.',
+      success: 'Profile ready to review.',
       errors: {
         empty:
           'Enter some career information before continuing.',
@@ -160,7 +161,7 @@ export const UI_TEXT = {
       kicker: 'Profile review',
       title: 'Review your career profile',
       description:
-        'Check the extracted information and correct anything that is missing or inaccurate before continuing.',
+      'Review and edit anything that needs correcting.',
       experienceLevel: 'Experience level',
       targetRoles: 'Target roles',
       skills: 'Skills',
@@ -176,7 +177,7 @@ export const UI_TEXT = {
       confirm: 'Confirm profile',
       confirmed: 'Profile confirmed',
       confirmationMessage:
-        'Your reviewed profile is ready to be used for job search.',
+      'Profile confirmed. You can continue to Jobs.',
       placeholders: {
         experienceLevel:
           'For example: Junior, Mid-level, Senior',
@@ -205,21 +206,21 @@ export const UI_TEXT = {
       kicker: 'Step 2',
       title: 'Search for jobs',
       description:
-        'Review the search settings generated from your confirmed career profile, then search for current job listings.',
+      'Choose the roles and location you want to search.',
       roles: 'Search roles',
       rolesHelp:
-        'You can search for up to 3 roles. These are initially taken from your confirmed target roles.',
+      'Up to 3 roles. These start from your profile.',
       role: 'Role',
       addRole: 'Add role',
       removeRole: 'Remove',
       location: 'Location',
       locationPlaceholder:
-        'For example: Adelaide',
+      'For example: Adelaide',
       locationHelp:
-        'Leave this blank if you do not want to restrict the search by location.',
+      'Leave blank to search all locations.',
       resultsPerRole: 'Results per role',
       resultsHelp:
-        'Choose between 1 and 10 listings for each role.',
+      'Choose 1–10 listings per role.',
       source: 'Job source',
       adzuna: 'Adzuna',
       search: 'Search jobs',
@@ -284,21 +285,21 @@ export const UI_TEXT = {
       kicker: 'Step 3',
       title: 'Generate recommendations',
       description:
-        'Rank the jobs you found against your reviewed career profile.',
+      'Choose how you want to rank the jobs.',
       rankingMethod: 'Ranking method',
       standard: 'Standard',
       aiAssisted: 'AI-assisted',
       standardHelp:
-        'Uses CareerVoice matching rules and does not consume AI units.',
+      'Rule-based ranking. Uses no AI units.',
       aiHelp:
-        'Uses AI-assisted ranking and consumes 10 AI units for each ranking run.',
+      'AI-assisted ranking. Uses 10 AI units per run.',
       maxResults: 'Recommendations to return',
       maxResultsHelp:
-        'Choose how many of the highest-ranked jobs to return, up to 10.',
+      'Return up to 10 recommendations.',
       excludeRejected:
-        'Exclude jobs rejected by hard constraints',
+      'Exclude jobs rejected by hard constraints',
       excludeRejectedHelp:
-        'When enabled, jobs that conflict with your non-negotiable requirements will not be returned.',
+      'Hide jobs that conflict with your hard constraints.',
       generate: 'Generate recommendations',
       generating: 'Generating recommendations…',
       success: 'Recommendations generated successfully.',
@@ -355,12 +356,21 @@ export const UI_TEXT = {
     sidebar: {
       show: '打开侧边栏',
       hide: '关闭侧边栏',
+      navigation: '求职流程',
+      profile: '职业画像',
+      jobs: '职位',
+      matches: '匹配推荐',
+      account: '账户',
+    },
+
+    navigation: {
+      backToProfile: '← 返回职业画像',
+      nextToJobs: '下一步：职位 →',
+      backToJobs: '← 返回职位',
+      nextToMatches: '下一步：匹配推荐 →',
     },
 
     app: {
-      headline: '找到符合你职业目标的岗位',
-      description:
-        '建立职业画像，搜索相关职位，并根据你的技能和偏好获得个性化推荐。',
       signOut: '退出登录',
       signingOut: '正在退出…',
       signOutError: '退出登录失败，请重试。',
@@ -368,15 +378,8 @@ export const UI_TEXT = {
       readyForReview: '可以开始检查',
       targetRoles: '个目标岗位',
       skillsIdentified: '项技能已识别。',
-      workflowProfileTitle: '建立你的职业画像',
-      workflowProfileDescription:
-        '提供你的技能、偏好和职业目标。',
-      workflowJobsTitle: '搜索职位',
-      workflowJobsDescription:
-        '根据你感兴趣的岗位和地区搜索职位。',
-      workflowRecommendationsTitle: '获取个性化推荐',
-      workflowRecommendationsDescription:
-        '通过匹配说明、缺失技能和偏好评分比较职位。',
+      productSummary:
+      '建立职业画像，搜索职位，并比较个性化匹配结果。',
     },
 
     auth: {
@@ -470,16 +473,16 @@ export const UI_TEXT = {
       step: '步骤 1',
       title: '建立你的职业画像',
       description:
-        '描述你的工作经历、技能、目标岗位、地区、工作方式偏好和职业目标。',
+      '填写你的经历、技能、偏好和职业目标。',
       information: '职业信息与偏好',
       placeholder:
-        '例如：我是一名初级软件开发人员，有 Python 和 React 经验，希望在阿德莱德寻找后端或全栈开发岗位……',
+      '例如：初级软件开发人员，掌握 Python 和 React，希望在阿德莱德寻找后端岗位……',
       extractionMethod: '职业画像生成方式',
       standard: '标准',
       aiAssisted: 'AI 辅助',
       extract: '生成职业画像',
       extracting: '正在生成职业画像…',
-      success: '职业画像生成成功。',
+      success: '职业画像已生成，可以开始检查。',
       errors: {
         empty:
           '请输入职业信息后再继续。',
@@ -502,7 +505,7 @@ export const UI_TEXT = {
       kicker: '职业画像复核',
       title: '检查并修改你的职业画像',
       description:
-        '在继续之前，请检查提取的信息，并补充或修改任何遗漏或不准确的内容。',
+      '检查并修改需要更正的内容。',
       experienceLevel: '经验水平',
       targetRoles: '目标岗位',
       skills: '技能',
@@ -518,7 +521,7 @@ export const UI_TEXT = {
       confirm: '确认职业画像',
       confirmed: '职业画像已确认',
       confirmationMessage:
-        '你已完成职业画像复核，可以用于后续职位搜索。',
+      '职业画像已确认，可以继续搜索职位。',
       placeholders: {
         experienceLevel:
           '例如：初级、中级、高级',
@@ -547,21 +550,21 @@ export const UI_TEXT = {
       kicker: '步骤 2',
       title: '搜索职位',
       description:
-        '检查根据已确认职业画像生成的搜索设置，然后搜索当前职位信息。',
+      '选择要搜索的岗位和地区。',
       roles: '搜索岗位',
       rolesHelp:
-        '最多可以搜索 3 个岗位。初始内容来自你已确认的目标岗位。',
+      '最多 3 个岗位，默认来自你的职业画像。',
       role: '岗位',
       addRole: '添加岗位',
       removeRole: '删除',
       location: '地区',
       locationPlaceholder:
-        '例如：Adelaide',
+      '例如：Adelaide',
       locationHelp:
-        '如果不希望按地区限制搜索，可以留空。',
+      '留空则不限制地区。',
       resultsPerRole: '每个岗位的结果数量',
       resultsHelp:
-        '每个岗位可以搜索 1 至 10 条职位信息。',
+      '每个岗位返回 1–10 条职位。',
       source: '职位来源',
       adzuna: 'Adzuna',
       search: '搜索职位',
@@ -626,21 +629,21 @@ export const UI_TEXT = {
       kicker: '步骤 3',
       title: '生成职位推荐',
       description:
-        '根据已确认的职业画像，对搜索到的职位进行匹配和排序。',
+      '选择职位排序方式。',
       rankingMethod: '排序方式',
       standard: '标准',
       aiAssisted: 'AI 辅助',
       standardHelp:
-        '使用 CareerVoice 的匹配规则，不消耗 AI 单位。',
+      '规则排序，不消耗 AI 单位。',
       aiHelp:
-        '使用 AI 辅助排序，每次排序消耗 10 个 AI 单位。',
+      'AI 辅助排序，每次消耗 10 个 AI 单位。',
       maxResults: '返回的推荐数量',
       maxResultsHelp:
-        '选择返回多少个排名最高的职位，最多 10 个。',
+      '最多返回 10 个推荐结果。',
       excludeRejected:
-        '排除违反不可妥协条件的职位',
+      '排除违反不可妥协条件的职位',
       excludeRejectedHelp:
-        '启用后，与不可妥协条件冲突的职位不会出现在推荐结果中。',
+      '隐藏与不可妥协条件冲突的职位。',
       generate: '生成职位推荐',
       generating: '正在生成推荐…',
       success: '职位推荐生成成功。',

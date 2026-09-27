@@ -31,6 +31,8 @@ import { RecommendationPanel } from './recommendations/RecommendationPanel'
 import {
   RecommendationResultsPanel,
 } from './recommendations/RecommendationResultsPanel'
+import type { AppStep } from './navigation/app-step'
+import { AppTopbar } from './layout/AppTopbar'
 
 function App() {
   const [language, setLanguage] =
@@ -86,6 +88,11 @@ function App() {
     setSidebarOpen,
   ] = useState(true)
 
+  const [
+  activeStep,
+  setActiveStep,
+] = useState<AppStep>('profile')
+
   const text = UI_TEXT[language]
 
   function handleSessionChange(
@@ -95,6 +102,7 @@ function App() {
 
     if (session !== null) {
       setSidebarOpen(true)
+      setActiveStep('profile')
     }
   }
 
@@ -113,6 +121,7 @@ function App() {
     setProfileConfirmed(false)
     setJobSearchResult(null)
     setRecommendationResult(null)
+    setActiveStep('profile')
 
     setUsageRefreshKey(
       (current) => current + 1,
@@ -138,6 +147,7 @@ function App() {
     setProfileConfirmed(false)
     setJobSearchResult(null)
     setRecommendationResult(null)
+    setActiveStep('profile')
   }
 
   function handleJobSearchComplete(
@@ -167,6 +177,7 @@ function App() {
 
   async function handleSignOut() {
     setSignOutError('')
+    setActiveStep('profile')
 
     try {
       await signOutCurrentSession()
@@ -208,6 +219,14 @@ function App() {
     )
   }
 
+  const canOpenJobs =
+    extractedProfile !== null
+    && profileConfirmed
+
+  const canOpenMatches =
+    jobSearchResult !== null
+    && jobSearchResult.jobs.length > 0
+
   return (
     <main
       className={
@@ -222,14 +241,18 @@ function App() {
         usageRefreshKey={
           usageRefreshKey
         }
-        signOutError={signOutError}
         isOpen={sidebarOpen}
-        onLanguageChange={
-          handleLanguageChange
+        activeStep={activeStep}
+        profileComplete={profileConfirmed}
+        jobsComplete={
+          jobSearchResult !== null
         }
-        onSignOut={() => {
-          void handleSignOut()
-        }}
+        matchesComplete={
+          recommendationResult !== null
+        }
+        canOpenJobs={canOpenJobs}
+        canOpenMatches={canOpenMatches}
+        onStepChange={setActiveStep}
         onClose={() => {
           setSidebarOpen(false)
         }}
@@ -261,164 +284,168 @@ function App() {
       )}
 
       <section className="app-content">
-        <div className="hero">
-          <p className="eyebrow">
-            CareerVoice AI
-          </p>
+        <AppTopbar
+          session={careerVoiceSession}
+          language={language}
+          signOutError={signOutError}
+          onLanguageChange={
+            handleLanguageChange
+          }
+          onSignOut={() => {
+            void handleSignOut()
+          }}
+        />
 
-          <h1>
-            {text.app.headline}
+        <div className="hero">
+          <h1 className="sr-only">
+            CareerVoice AI
           </h1>
 
-          <p className="hero-description">
-            {text.app.description}
-          </p>
+          {activeStep === 'profile' && (
+            <>
+              <ProfileInputPanel
+                session={careerVoiceSession}
+                language={language}
+                onProfileExtracted={
+                  handleProfileExtracted
+                }
+              />
 
-          <ProfileInputPanel
-            session={careerVoiceSession}
-            language={language}
-            onProfileExtracted={
-              handleProfileExtracted
-            }
-          />
+              {extractedProfile !== null && (
+                <ProfileReviewPanel
+                  profile={
+                    extractedProfile.profile
+                  }
+                  language={language}
+                  confirmed={
+                    profileConfirmed
+                  }
+                  onChange={
+                    handleProfileChange
+                  }
+                  onConfirm={
+                    handleProfileConfirm
+                  }
+                />
+              )}
 
-          {extractedProfile !== null && (
-            <ProfileReviewPanel
-              profile={
-                extractedProfile.profile
-              }
-              language={language}
-              confirmed={
-                profileConfirmed
-              }
-              onChange={
-                handleProfileChange
-              }
-              onConfirm={
-                handleProfileConfirm
-              }
-            />
+              <nav
+                className="step-navigation step-navigation-next-only"
+                aria-label={text.sidebar.navigation}
+              >
+                <button
+                  className="primary-button step-navigation-button"
+                  type="button"
+                  disabled={!canOpenJobs}
+                  onClick={() => {
+                    setActiveStep('jobs')
+                  }}
+                >
+                  {text.navigation.nextToJobs}
+                </button>
+              </nav>
+            </>
           )}
 
-          {extractedProfile !== null
-            && profileConfirmed && (
-            <JobSearchPanel
-              session={careerVoiceSession}
-              profile={
-                extractedProfile.profile
-              }
-              language={language}
-              onSearchComplete={
-                handleJobSearchComplete
-              }
-              onSearchInvalidated={() => {
-                setJobSearchResult(null)
-                setRecommendationResult(null)
-              }}
-            />
+          {activeStep === 'jobs'
+            && canOpenJobs
+            && extractedProfile !== null && (
+            <>
+              <JobSearchPanel
+                session={careerVoiceSession}
+                profile={
+                  extractedProfile.profile
+                }
+                language={language}
+                onSearchComplete={
+                  handleJobSearchComplete
+                }
+                onSearchInvalidated={() => {
+                  setJobSearchResult(null)
+                  setRecommendationResult(null)
+                }}
+              />
+
+              {jobSearchResult !== null && (
+                <JobResultsPanel
+                  jobs={jobSearchResult.jobs}
+                  language={language}
+                />
+              )}
+
+              <nav
+                className="step-navigation"
+                aria-label={text.sidebar.navigation}
+              >
+                <button
+                  className="secondary-button step-navigation-button"
+                  type="button"
+                  onClick={() => {
+                    setActiveStep('profile')
+                  }}
+                >
+                  {text.navigation.backToProfile}
+                </button>
+
+                <button
+                  className="primary-button step-navigation-button"
+                  type="button"
+                  disabled={!canOpenMatches}
+                  onClick={() => {
+                    setActiveStep('matches')
+                  }}
+                >
+                  {text.navigation.nextToMatches}
+                </button>
+              </nav>
+            </>
           )}
 
-          {jobSearchResult !== null && (
-            <JobResultsPanel
-              jobs={jobSearchResult.jobs}
-              language={language}
-            />
+          {activeStep === 'matches'
+            && canOpenMatches
+            && extractedProfile !== null
+            && jobSearchResult !== null && (
+            <>
+              <RecommendationPanel
+                session={careerVoiceSession}
+                profile={
+                  extractedProfile.profile
+                }
+                jobs={
+                  jobSearchResult.jobs
+                }
+                language={language}
+                onComplete={
+                  handleRecommendationComplete
+                }
+                onInvalidated={() => {
+                  setRecommendationResult(null)
+                }}
+              />
+
+              {recommendationResult !== null && (
+                <RecommendationResultsPanel
+                  result={recommendationResult}
+                  language={language}
+                />
+              )}
+
+              <nav
+                className="step-navigation"
+                aria-label={text.sidebar.navigation}
+              >
+                <button
+                  className="secondary-button step-navigation-button"
+                  type="button"
+                  onClick={() => {
+                    setActiveStep('jobs')
+                  }}
+                >
+                  {text.navigation.backToJobs}
+                </button>
+              </nav>
+            </>
           )}
-
-          {jobSearchResult !== null
-            && jobSearchResult.jobs.length > 0 && (
-            <RecommendationPanel
-              session={careerVoiceSession}
-              profile={
-                extractedProfile!.profile
-              }
-              jobs={
-                jobSearchResult.jobs
-              }
-              language={language}
-              onComplete={
-                handleRecommendationComplete
-              }
-              onInvalidated={() => {
-                setRecommendationResult(null)
-              }}
-            />
-          )}
-
-          {recommendationResult !== null && (
-            <RecommendationResultsPanel
-              result={recommendationResult}
-              language={language}
-            />
-          )}
-
-          <div className="workflow">
-            <div className="workflow-step">
-              <span className="step-number">
-                1
-              </span>
-
-              <div>
-                <h2>
-                  {
-                    text.app
-                      .workflowProfileTitle
-                  }
-                </h2>
-
-                <p>
-                  {
-                    text.app
-                      .workflowProfileDescription
-                  }
-                </p>
-              </div>
-            </div>
-
-            <div className="workflow-step">
-              <span className="step-number">
-                2
-              </span>
-
-              <div>
-                <h2>
-                  {
-                    text.app
-                      .workflowJobsTitle
-                  }
-                </h2>
-
-                <p>
-                  {
-                    text.app
-                      .workflowJobsDescription
-                  }
-                </p>
-              </div>
-            </div>
-
-            <div className="workflow-step">
-              <span className="step-number">
-                3
-              </span>
-
-              <div>
-                <h2>
-                  {
-                    text.app
-                      .workflowRecommendationsTitle
-                  }
-                </h2>
-
-                <p>
-                  {
-                    text.app
-                      .workflowRecommendationsDescription
-                  }
-                </p>
-              </div>
-            </div>
-          </div>
         </div>
       </section>
     </main>

@@ -3,19 +3,23 @@ import {
   UI_TEXT,
   type AppLanguage,
 } from '../i18n'
-import { LanguageToggle } from '../LanguageToggle'
+import type { AppStep } from '../navigation/app-step'
 import { UsageSummary } from '../usage/UsageSummary'
 
 interface AppSidebarProps {
   session: CareerVoiceSession
   language: AppLanguage
   usageRefreshKey: number
-  signOutError: string
   isOpen: boolean
-  onLanguageChange: (
-    language: AppLanguage,
+  activeStep: AppStep
+  profileComplete: boolean
+  jobsComplete: boolean
+  matchesComplete: boolean
+  canOpenJobs: boolean
+  canOpenMatches: boolean
+  onStepChange: (
+    step: AppStep,
   ) => void
-  onSignOut: () => void
   onClose: () => void
 }
 
@@ -23,10 +27,14 @@ export function AppSidebar({
   session,
   language,
   usageRefreshKey,
-  signOutError,
   isOpen,
-  onLanguageChange,
-  onSignOut,
+  activeStep,
+  profileComplete,
+  jobsComplete,
+  matchesComplete,
+  canOpenJobs,
+  canOpenMatches,
+  onStepChange,
   onClose,
 }: AppSidebarProps) {
   const text = UI_TEXT[language]
@@ -37,8 +45,8 @@ export function AppSidebar({
       hidden={!isOpen}
     >
       <div className="sidebar-header">
-        <div className="sidebar-brand">
-          CareerVoice AI
+        <div className="sidebar-section-title">
+          {text.sidebar.navigation}
         </div>
 
         <button
@@ -52,34 +60,87 @@ export function AppSidebar({
         </button>
       </div>
 
-      <LanguageToggle
-        language={language}
-        onChange={onLanguageChange}
-      />
-
-      <div className="sidebar-account">
-        <p className="sidebar-label">
-          {text.auth.signedInAs}
-        </p>
-
-        <p className="sidebar-email">
-          {session.user.email}
-        </p>
-
+      <nav
+        className="sidebar-navigation"
+        aria-label={text.sidebar.navigation}
+      >
         <button
-          className="secondary-button sidebar-sign-out"
+          className={
+            activeStep === 'profile'
+              ? 'sidebar-nav-item sidebar-nav-item-active'
+              : 'sidebar-nav-item'
+          }
           type="button"
-          onClick={onSignOut}
+          aria-current={
+            activeStep === 'profile'
+              ? 'step'
+              : undefined
+          }
+          onClick={() => {
+            onStepChange('profile')
+          }}
         >
-          {text.app.signOut}
+          <span className="sidebar-nav-number">
+            {profileComplete ? '✓' : '1'}
+          </span>
+
+          <span>
+            {text.sidebar.profile}
+          </span>
         </button>
 
-        {signOutError && (
-          <p className="auth-message auth-message-error">
-            {signOutError}
-          </p>
-        )}
-      </div>
+        <button
+          className={
+            activeStep === 'jobs'
+              ? 'sidebar-nav-item sidebar-nav-item-active'
+              : 'sidebar-nav-item'
+          }
+          type="button"
+          disabled={!canOpenJobs}
+          aria-current={
+            activeStep === 'jobs'
+              ? 'step'
+              : undefined
+          }
+          onClick={() => {
+            onStepChange('jobs')
+          }}
+        >
+          <span className="sidebar-nav-number">
+            {jobsComplete ? '✓' : '2'}
+          </span>
+
+          <span>
+            {text.sidebar.jobs}
+          </span>
+        </button>
+
+        <button
+          className={
+            activeStep === 'matches'
+              ? 'sidebar-nav-item sidebar-nav-item-active'
+              : 'sidebar-nav-item'
+          }
+          type="button"
+          disabled={!canOpenMatches}
+          aria-current={
+            activeStep === 'matches'
+              ? 'step'
+              : undefined
+          }
+          onClick={() => {
+            onStepChange('matches')
+          }}
+        >
+          <span className="sidebar-nav-number">
+            {matchesComplete ? '✓' : '3'}
+          </span>
+
+          <span>
+            {text.sidebar.matches}
+          </span>
+        </button>
+      </nav>
 
       <div className="sidebar-divider" />
 
