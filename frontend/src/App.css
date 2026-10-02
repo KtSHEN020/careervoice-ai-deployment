@@ -643,6 +643,27 @@
   color: #6b7280;
 }
 
+.voice-recording-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.voice-recording-status {
+  font-size: 14px;
+  font-weight: 600;
+  color: #b91c1c;
+}
+
+.voice-recording-player {
+  width: 100%;
+  max-width: 520px;
+}
+
+.voice-transcribe-button {
+  justify-self: start;
+}
+
 .profile-checkbox {
   display: flex;
   align-items: flex-start;

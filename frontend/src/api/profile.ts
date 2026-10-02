@@ -30,6 +30,16 @@ export interface DocumentProfileExtractionRequest {
   allow_image_recognition?: boolean
 }
 
+export interface VoiceTranscriptionRequest {
+  recording: Blob
+  filename: string
+  output_language: OutputLanguage
+}
+
+export interface VoiceTranscriptionResponse {
+  text: string
+}
+
 export interface ProfileExtractionResponse {
   profile: CareerProfile
   extractor: ProfileExtractor
@@ -89,6 +99,33 @@ export function extractCareerProfileFromDocument(
 
   return apiRequest<ProfileExtractionResponse>(
     '/api/v1/profile/extract-document',
+    {
+      method: 'POST',
+      accessToken,
+      body: formData,
+    },
+  )
+}
+
+export function transcribeVoiceRecording(
+  accessToken: string,
+  request: VoiceTranscriptionRequest,
+): Promise<VoiceTranscriptionResponse> {
+  const formData = new FormData()
+
+  formData.append(
+    'recording',
+    request.recording,
+    request.filename,
+  )
+
+  formData.append(
+    'output_language',
+    request.output_language,
+  )
+
+  return apiRequest<VoiceTranscriptionResponse>(
+    '/api/v1/profile/transcribe-voice',
     {
       method: 'POST',
       accessToken,

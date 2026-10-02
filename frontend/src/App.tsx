@@ -309,6 +309,11 @@ function App() {
                 onProfileExtracted={
                   handleProfileExtracted
                 }
+                onUsageChanged={() => {
+                  setUsageRefreshKey(
+                    (current) => current + 1,
+                  )
+                }}
               />
 
               {extractedProfile !== null && (

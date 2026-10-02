@@ -40,6 +40,9 @@ from backend.app.profile_service import (
 )
 from backend.app.security import get_current_user
 
+from careervoice_ai_web_app.voice_input import (
+    MAX_VOICE_RECORDING_BYTES,
+)
 
 router = APIRouter()
 
@@ -105,6 +108,10 @@ class TextProfileExtractionResponse(BaseModel):
         "zh-CN",
     ]
 
+class VoiceTranscriptionResponse(BaseModel):
+    """Text returned after transcribing browser-recorded audio."""
+
+    text: str
 
 def get_profile_extraction_provider(
     request: Request,
@@ -282,4 +289,85 @@ async def extract_document_profile(
         profile=result.profile,
         extractor=result.extractor,
         output_language=result.output_language,
+    )
+
+
+@router.post(
+    "/profile/transcribe-voice",
+    response_model=VoiceTranscriptionResponse,
+)
+async def transcribe_voice_profile_input(
+    current_user: Annotated[
+        AppUser,
+        Depends(get_current_user),
+    ],
+    profile_provider: Annotated[
+        ProfileExtractionProvider,
+        Depends(get_profile_extraction_provider),
+    ],
+    recording: Annotated[
+        UploadFile,
+        File(),
+    ],
+    output_language: Annotated[
+        Literal[
+            "en",
+            "zh-CN",
+        ],
+        Form(),
+    ],
+) -> VoiceTranscriptionResponse:
+    """Transcribe authenticated browser voice input."""
+    filename = (
+        recording.filename or ""
+    ).strip()
+
+    media_type = (
+        recording.content_type or ""
+    ).strip()
+
+    try:
+        content = await recording.read(
+            MAX_VOICE_RECORDING_BYTES + 1
+        )
+    finally:
+        await recording.close()
+
+    if (
+        len(content)
+        > MAX_VOICE_RECORDING_BYTES
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+            detail=(
+                "The voice recording is too large. "
+                "The maximum supported size is 10 MB."
+            ),
+        )
+
+    try:
+        result = await run_in_threadpool(
+            profile_provider.transcribe_voice,
+            user=current_user,
+            filename=filename,
+            content=content,
+            media_type=media_type,
+            output_language=output_language,
+        )
+    except AIUsageLimitError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=(
+                "Daily AI allowance is insufficient "
+                "for this request."
+            ),
+        ) from exc
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=str(exc),
+        ) from exc
+
+    return VoiceTranscriptionResponse(
+        text=result.text,
     )

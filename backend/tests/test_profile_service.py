@@ -18,6 +18,10 @@ from backend.app.profile_service import (
     ProfileExtractionService,
 )
 
+from careervoice_ai_web_app.voice_input import (
+    VoiceTranscript,
+)
+
 
 TEST_USER_ID = UUID(
     "11111111-2222-3333-4444-555555555555"
@@ -47,6 +51,13 @@ class FakeProfileWorkflow:
                 str,
                 bool,
                 SessionWorkspace,
+            ]
+        ] = []
+        self.voice_calls: list[
+            tuple[
+                str,
+                bytes,
+                str,
             ]
         ] = []
 
@@ -152,6 +163,33 @@ class FakeProfileWorkflow:
                 }
             ),
             extractor=extractor.strip().lower(),
+        )
+
+    def transcribe_voice(
+        self,
+        *,
+        filename: str,
+        content: bytes,
+        media_type: str,
+    ) -> VoiceTranscript:
+        self.voice_calls.append(
+            (
+                filename,
+                content,
+                media_type,
+            )
+        )
+
+        if self.should_fail:
+            raise ValueError(
+                "Voice transcription failed."
+            )
+
+        return VoiceTranscript(
+            text=(
+                "I want a junior backend role "
+                "in Adelaide."
+            )
         )
 
 
@@ -373,3 +411,40 @@ def test_document_profile_extraction_cleans_workspace_after_failure(
     )
 
     assert not workspace.directory.exists()
+
+
+def test_voice_transcription_uses_user_workflow() -> None:
+    user = create_user()
+    workflow = FakeProfileWorkflow()
+
+    factory = FakeProfileWorkflowFactory(
+        workflow
+    )
+
+    service = ProfileExtractionService(
+        workflow_factory=factory,
+    )
+
+    result = service.transcribe_voice(
+        user=user,
+        filename="career-voice.mp4",
+        content=b"fake-browser-audio",
+        media_type="audio/mp4",
+        output_language="en",
+    )
+
+    assert factory.user_seen is user
+    assert factory.output_language_seen == "en"
+
+    assert workflow.voice_calls == [
+        (
+            "career-voice.mp4",
+            b"fake-browser-audio",
+            "audio/mp4",
+        )
+    ]
+
+    assert result.text == (
+        "I want a junior backend role "
+        "in Adelaide."
+    )

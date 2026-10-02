@@ -29,6 +29,11 @@ from backend.app.main import (
     create_runtime_app,
 )
 
+from careervoice_ai_web_app.voice_input import (
+    MAX_VOICE_RECORDING_BYTES,
+    VoiceTranscript,
+)
+
 
 TEST_USER_ID = UUID(
     "11111111-2222-3333-4444-555555555555"
@@ -62,6 +67,9 @@ class FakeProfileExtractionProvider:
             dict[str, object]
         ] = []
         self.document_calls: list[
+            dict[str, object]
+        ] = []
+        self.voice_calls: list[
             dict[str, object]
         ] = []
 
@@ -177,6 +185,37 @@ class FakeProfileExtractionProvider:
             },
             extractor=extractor,
             output_language=output_language,
+        )
+
+    def transcribe_voice(
+        self,
+        *,
+        user: AppUser,
+        filename: str,
+        content: bytes,
+        media_type: str,
+        output_language: str,
+    ) -> VoiceTranscript:
+        self.voice_calls.append(
+            {
+                "user": user,
+                "filename": filename,
+                "content": content,
+                "media_type": media_type,
+                "output_language": output_language,
+            }
+        )
+
+        if self.quota_exhausted:
+            raise AIUsageLimitError(
+                "No allowance remains."
+            )
+
+        return VoiceTranscript(
+            text=(
+                "I am a junior Python developer "
+                "looking for backend roles in Adelaide."
+            )
         )
 
 
@@ -753,6 +792,202 @@ def test_document_profile_extraction_returns_429_when_ai_quota_is_exhausted() ->
                 "resume.txt",
                 b"Python developer",
                 "text/plain",
+            ),
+        },
+    )
+
+    assert response.status_code == 429
+
+    assert response.json() == {
+        "detail": (
+            "Daily AI allowance is insufficient "
+            "for this request."
+        )
+    }
+
+
+def test_voice_transcription_requires_authentication() -> None:
+    user = create_user()
+    provider = FakeProfileExtractionProvider()
+
+    app = create_app(
+        BackendSettings(
+            environment="test",
+        ),
+        current_user_resolver=(
+            FakeCurrentUserResolver(
+                user=user
+            )
+        ),
+        profile_extraction_provider=provider,
+    )
+
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/v1/profile/transcribe-voice",
+        data={
+            "output_language": "en",
+        },
+        files={
+            "recording": (
+                "career-voice.mp4",
+                b"fake-browser-audio",
+                "audio/mp4",
+            ),
+        },
+    )
+
+    assert response.status_code == 401
+    assert provider.voice_calls == []
+
+
+def test_voice_transcription_returns_transcript() -> None:
+    user = create_user()
+    provider = FakeProfileExtractionProvider()
+
+    app = create_app(
+        BackendSettings(
+            environment="test",
+        ),
+        current_user_resolver=(
+            FakeCurrentUserResolver(
+                user=user
+            )
+        ),
+        profile_extraction_provider=provider,
+    )
+
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/v1/profile/transcribe-voice",
+        headers={
+            "Authorization": (
+                "Bearer valid-test-token"
+            ),
+        },
+        data={
+            "output_language": "en",
+        },
+        files={
+            "recording": (
+                "career-voice.mp4",
+                b"fake-browser-audio",
+                "audio/mp4",
+            ),
+        },
+    )
+
+    assert response.status_code == 200
+
+    assert response.json() == {
+        "text": (
+            "I am a junior Python developer "
+            "looking for backend roles in Adelaide."
+        )
+    }
+
+    assert provider.voice_calls == [
+        {
+            "user": user,
+            "filename": "career-voice.mp4",
+            "content": b"fake-browser-audio",
+            "media_type": "audio/mp4",
+            "output_language": "en",
+        }
+    ]
+
+
+def test_voice_transcription_rejects_oversized_recording() -> None:
+    user = create_user()
+    provider = FakeProfileExtractionProvider()
+
+    app = create_app(
+        BackendSettings(
+            environment="test",
+        ),
+        current_user_resolver=(
+            FakeCurrentUserResolver(
+                user=user
+            )
+        ),
+        profile_extraction_provider=provider,
+    )
+
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/v1/profile/transcribe-voice",
+        headers={
+            "Authorization": (
+                "Bearer valid-test-token"
+            ),
+        },
+        data={
+            "output_language": "en",
+        },
+        files={
+            "recording": (
+                "career-voice.mp4",
+                b"x"
+                * (
+                    MAX_VOICE_RECORDING_BYTES
+                    + 1
+                ),
+                "audio/mp4",
+            ),
+        },
+    )
+
+    assert response.status_code == 413
+
+    assert response.json() == {
+        "detail": (
+            "The voice recording is too large. "
+            "The maximum supported size is 10 MB."
+        )
+    }
+
+    assert provider.voice_calls == []
+
+
+def test_voice_transcription_returns_429_when_ai_quota_is_exhausted() -> None:
+    user = create_user()
+
+    provider = FakeProfileExtractionProvider(
+        quota_exhausted=True
+    )
+
+    app = create_app(
+        BackendSettings(
+            environment="test",
+        ),
+        current_user_resolver=(
+            FakeCurrentUserResolver(
+                user=user
+            )
+        ),
+        profile_extraction_provider=provider,
+    )
+
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/v1/profile/transcribe-voice",
+        headers={
+            "Authorization": (
+                "Bearer valid-test-token"
+            ),
+        },
+        data={
+            "output_language": "en",
+        },
+        files={
+            "recording": (
+                "career-voice.webm",
+                b"fake-browser-audio",
+                "audio/webm",
             ),
         },
     )

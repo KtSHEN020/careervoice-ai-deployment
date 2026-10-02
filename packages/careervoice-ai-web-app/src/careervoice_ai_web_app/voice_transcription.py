@@ -14,6 +14,7 @@ from voice_career_profile_extractor import (
 from careervoice_ai_web_app.voice_input import (
     VoiceRecording,
     VoiceTranscript,
+    voice_media_type_suffix,
 )
 
 TranscribeAudioFile = Callable[[str | Path], str]
@@ -38,9 +39,13 @@ class Repo1VoiceTranscriber:
             with TemporaryDirectory(
                 prefix="careervoice-voice-"
             ) as temporary_directory:
+                audio_suffix = voice_media_type_suffix(
+                    recording.media_type
+                )
+
                 audio_path = (
                     Path(temporary_directory)
-                    / "browser-recording.wav"
+                    / f"browser-recording{audio_suffix}"
                 )
 
                 audio_path.write_bytes(

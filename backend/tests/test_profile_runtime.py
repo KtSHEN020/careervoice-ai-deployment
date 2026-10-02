@@ -30,6 +30,11 @@ from backend.app.profile_service import (
 )
 from backend.app.main import create_runtime_app
 
+from careervoice_ai_web_app.voice_input import (
+    VoiceRecording,
+    VoiceTranscript,
+)
+
 
 TEST_USER_ID = UUID(
     "11111111-2222-3333-4444-555555555555"
@@ -121,6 +126,23 @@ class FakeGateway:
             "career_goals": [],
             "notes": [],
         }
+
+
+class FakeVoiceTranscriber:
+    def __init__(self) -> None:
+        self.recording_seen: (
+            VoiceRecording | None
+        ) = None
+
+    def transcribe(
+        self,
+        recording: VoiceRecording,
+    ) -> VoiceTranscript:
+        self.recording_seen = recording
+
+        return VoiceTranscript(
+            text="I want a backend role."
+        )
 
 
 def create_user() -> AppUser:
@@ -347,4 +369,62 @@ def test_runtime_app_configures_profile_service_with_database() -> None:
     assert isinstance(
         workflow_factory.usage_repository,
         PostgresPersistentUsageRepository,
+    )
+
+
+def test_voice_transcription_uses_persistent_ai_usage() -> None:
+    user = create_user()
+    usage_repository = FakeUsageRepository()
+    voice_transcriber = FakeVoiceTranscriber()
+
+    factory = CareerVoiceProfileWorkflowFactory(
+        usage_repository=usage_repository,
+        daily_ai_unit_limit=60,
+        gateway_factory=FakeGateway,
+        voice_transcriber_factory=(
+            lambda: voice_transcriber
+        ),
+    )
+
+    workflow = factory(
+        user=user,
+        output_language="en",
+    )
+
+    result = workflow.transcribe_voice(
+        filename="career-voice.mp4",
+        content=b"fake-browser-audio",
+        media_type="audio/mp4",
+    )
+
+    assert result.text == (
+        "I want a backend role."
+    )
+
+    assert len(
+        usage_repository.consume_calls
+    ) == 1
+
+    usage_call = (
+        usage_repository.consume_calls[0]
+    )
+
+    assert usage_call["user"] is user
+    assert usage_call["units"] == 1
+    assert usage_call["daily_limit"] == 60
+    assert (
+        usage_call["operation"]
+        == UsageOperation.VOICE_TRANSCRIPTION
+    )
+
+    assert (
+        voice_transcriber.recording_seen
+        is not None
+    )
+
+    assert (
+        voice_transcriber
+        .recording_seen
+        .media_type
+        == "audio/mp4"
     )

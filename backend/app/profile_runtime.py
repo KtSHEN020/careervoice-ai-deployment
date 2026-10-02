@@ -33,10 +33,22 @@ from backend.app.profile_service import (
     SupportsProfileWorkflow,
 )
 
+from careervoice_ai_web_app.voice_input import (
+    SupportsVoiceTranscriber,
+)
+from careervoice_ai_web_app.voice_transcription import (
+    Repo1VoiceTranscriber,
+)
+
 
 GatewayFactory = Callable[
     [],
     SupportsOrchestratorGateway,
+]
+
+VoiceTranscriberFactory = Callable[
+    [],
+    SupportsVoiceTranscriber,
 ]
 
 
@@ -48,6 +60,9 @@ class CareerVoiceProfileWorkflowFactory:
     daily_ai_unit_limit: int
     gateway_factory: GatewayFactory = (
         Repo4OrchestratorGateway
+    )
+    voice_transcriber_factory: VoiceTranscriberFactory = (
+        Repo1VoiceTranscriber
     )
 
     def __call__(
@@ -65,6 +80,9 @@ class CareerVoiceProfileWorkflowFactory:
 
         return CareerVoiceWorkflowService(
             self.gateway_factory(),
+            voice_transcriber=(
+                self.voice_transcriber_factory()
+            ),
             ai_usage_budget=ai_usage_budget,
             output_language=output_language,
         )

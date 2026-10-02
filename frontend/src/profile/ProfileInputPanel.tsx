@@ -19,6 +19,7 @@ import {
   DEFAULT_PROFILE_DRAFT,
   type ProfileDraft,
 } from './profile-state'
+import { VoiceRecorder } from './VoiceRecorder'
 
 interface ProfileInputPanelProps {
   session: CareerVoiceSession
@@ -26,10 +27,12 @@ interface ProfileInputPanelProps {
   onProfileExtracted: (
     result: ProfileExtractionResponse,
   ) => void
+  onUsageChanged: () => void
 }
 
 type ProfileInputMode =
   | 'text'
+  | 'voice'
   | 'document'
 
 const MAX_CAREER_TEXT_CHARACTERS = 12_000
@@ -81,6 +84,7 @@ export function ProfileInputPanel({
   session,
   language,
   onProfileExtracted,
+  onUsageChanged,
 }: ProfileInputPanelProps) {
   const text =
     UI_TEXT[language].profile
@@ -102,6 +106,11 @@ export function ProfileInputPanel({
     documentFile,
     setDocumentFile,
   ] = useState<File | null>(null)
+
+  const [
+    voiceTranscript,
+    setVoiceTranscript,
+  ] = useState('')
 
   const [
     additionalPreferences,
@@ -145,10 +154,15 @@ export function ProfileInputPanel({
     setStatusMessage('')
 
     if (inputMode === 'text') {
-      const careerText =
-        draft.careerText.trim()
+      if (!draft.careerText.trim()) {
+        setErrorMessage(
+          text.errors.empty,
+        )
 
-      if (!careerText) {
+        return
+      }
+    } else if (inputMode === 'voice') {
+      if (!voiceTranscript.trim()) {
         setErrorMessage(
           text.errors.empty,
         )
@@ -183,19 +197,8 @@ export function ProfileInputPanel({
         session.supabaseSession.access_token
 
       const result =
-        inputMode === 'text'
-          ? await extractCareerProfile(
-              accessToken,
-              {
-                career_preference_text:
-                  draft.careerText.trim(),
-                extractor:
-                  draft.extractor,
-                output_language:
-                  language,
-              },
-            )
-          : await extractCareerProfileFromDocument(
+        inputMode === 'document'
+          ? await extractCareerProfileFromDocument(
               accessToken,
               {
                 document:
@@ -208,6 +211,19 @@ export function ProfileInputPanel({
                   additionalPreferences.trim(),
                 allow_image_recognition:
                   allowImageRecognition,
+              },
+            )
+          : await extractCareerProfile(
+              accessToken,
+              {
+                career_preference_text:
+                  inputMode === 'voice'
+                    ? voiceTranscript.trim()
+                    : draft.careerText.trim(),
+                extractor:
+                  draft.extractor,
+                output_language:
+                  language,
               },
             )
 
@@ -279,6 +295,26 @@ export function ProfileInputPanel({
 
             <button
               className={
+                inputMode === 'voice'
+                  ? 'profile-input-mode-button profile-input-mode-button-active'
+                  : 'profile-input-mode-button'
+              }
+              type="button"
+              aria-pressed={
+                inputMode === 'voice'
+              }
+              disabled={isSubmitting}
+              onClick={() => {
+                handleInputModeChange(
+                  'voice',
+                )
+              }}
+            >
+              {text.voiceInput}
+            </button>
+
+            <button
+              className={
                 inputMode === 'document'
                   ? 'profile-input-mode-button profile-input-mode-button-active'
                   : 'profile-input-mode-button'
@@ -331,6 +367,25 @@ export function ProfileInputPanel({
               {MAX_CAREER_TEXT_CHARACTERS.toLocaleString()}
             </div>
           </>
+        ) : inputMode === 'voice' ? (
+          <VoiceRecorder
+            session={session}
+            language={language}
+            transcript={voiceTranscript}
+            disabled={isSubmitting}
+            onTranscriptChange={(
+              transcript,
+            ) => {
+              setVoiceTranscript(
+                transcript,
+              )
+              setErrorMessage('')
+              setStatusMessage('')
+            }}
+            onUsageChanged={
+              onUsageChanged
+            }
+          />
         ) : (
           <>
             <div className="profile-field">

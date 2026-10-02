@@ -134,6 +134,42 @@ export const UI_TEXT = {
       inputMethod: 'Input method',
       textInput: 'Text',
       documentInput: 'Document',
+      voiceInput: 'Voice',
+
+      voiceRecording: 'Voice recording',
+      voiceHelp:
+        'Record your career information, then transcribe and review it. Transcription uses 1 AI unit.',
+      startRecording: 'Start recording',
+      stopRecording: 'Stop recording',
+      recording: 'Recording…',
+      transcribeVoice: 'Transcribe recording',
+      transcribingVoice: 'Transcribing…',
+      voiceTranscript: 'Transcript',
+      voiceTranscriptPlaceholder:
+        'Your transcript will appear here. You can edit it before creating your career profile.',
+
+      voiceErrors: {
+        unsupported:
+          'Voice recording is not supported by this browser.',
+        microphone:
+          'Microphone access could not be started. Check your browser permission and try again.',
+        noRecording:
+          'Record some audio before transcribing.',
+        tooLarge:
+          'The voice recording must be 10 MB or smaller.',
+        invalid:
+          'The voice recording could not be processed. Record it again and retry.',
+        expired:
+          'Your session has expired. Please sign in again.',
+        denied:
+          'Your account is not allowed to perform this action.',
+        quota:
+          'You do not have enough AI allowance remaining to transcribe this recording.',
+        unavailable:
+          'Voice transcription is temporarily unavailable.',
+        generic:
+          'Voice transcription failed. Please try again.',
+      },
 
       information: 'Career information',
       placeholder:
@@ -505,6 +541,41 @@ export const UI_TEXT = {
       inputMethod: '输入方式',
       textInput: '文字',
       documentInput: '文档',
+      voiceInput: '语音',
+      voiceRecording: '语音录制',
+      voiceHelp:
+        '录制你的职业信息，然后转写并检查内容。语音转写消耗 1 个 AI 单位。',
+      startRecording: '开始录音',
+      stopRecording: '停止录音',
+      recording: '正在录音…',
+      transcribeVoice: '转写录音',
+      transcribingVoice: '正在转写…',
+      voiceTranscript: '转写文本',
+      voiceTranscriptPlaceholder:
+        '转写结果会显示在这里。生成职业画像前可以进行修改。',
+
+      voiceErrors: {
+        unsupported:
+          '当前浏览器不支持语音录制。',
+        microphone:
+          '无法启动麦克风，请检查浏览器权限后重试。',
+        noRecording:
+          '请先录制语音再进行转写。',
+        tooLarge:
+          '语音录音大小不能超过 10 MB。',
+        invalid:
+          '无法处理该语音录音，请重新录制后重试。',
+        expired:
+          '登录状态已失效，请重新登录。',
+        denied:
+          '你的账号目前无法执行此操作。',
+        quota:
+          '当前剩余 AI 额度不足以转写这段录音。',
+        unavailable:
+          '语音转写服务暂时不可用。',
+        generic:
+          '语音转写失败，请重试。',
+      },
 
       information: '职业信息与偏好',
       placeholder:

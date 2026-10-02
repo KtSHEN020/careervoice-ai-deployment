@@ -15,6 +15,9 @@ from careervoice_ai_web_app.workflow_service import (
     ProfileExtractionResult,
 )
 
+from careervoice_ai_web_app.voice_input import (
+    VoiceTranscript,
+)
 
 class SupportsProfileWorkflow(Protocol):
     """Profile workflow operations required by the backend."""
@@ -40,6 +43,16 @@ class SupportsProfileWorkflow(Protocol):
         allow_image_recognition: bool = False,
     ) -> ProfileExtractionResult:
         """Extract a structured profile from a career document."""
+        ...
+
+    def transcribe_voice(
+        self,
+        *,
+        filename: str,
+        content: bytes,
+        media_type: str,
+    ) -> VoiceTranscript:
+        """Transcribe one browser voice recording."""
         ...
 
 
@@ -91,6 +104,18 @@ class ProfileExtractionProvider(Protocol):
         allow_image_recognition: bool = False,
     ) -> TextProfileExtraction:
         """Extract a structured career profile from a document."""
+        ...
+
+    def transcribe_voice(
+        self,
+        *,
+        user: AppUser,
+        filename: str,
+        content: bytes,
+        media_type: str,
+        output_language: str,
+    ) -> VoiceTranscript:
+        """Transcribe authenticated browser voice input."""
         ...
 
 
@@ -173,6 +198,27 @@ class ProfileExtractionService:
             profile=profile,
             extractor=result.extractor,
             output_language=output_language.strip(),
+        )
+
+    def transcribe_voice(
+        self,
+        *,
+        user: AppUser,
+        filename: str,
+        content: bytes,
+        media_type: str,
+        output_language: str,
+    ) -> VoiceTranscript:
+        """Transcribe browser voice input for one authenticated user."""
+        workflow = self.workflow_factory(
+            user=user,
+            output_language=output_language,
+        )
+
+        return workflow.transcribe_voice(
+            filename=filename,
+            content=content,
+            media_type=media_type,
         )
 
     def _workspace(

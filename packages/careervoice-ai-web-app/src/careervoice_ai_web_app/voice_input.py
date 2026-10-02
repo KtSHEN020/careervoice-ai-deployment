@@ -7,9 +7,19 @@ from typing import Protocol
 
 MAX_VOICE_RECORDING_BYTES = 10 * 1024 * 1024
 
-SUPPORTED_VOICE_MEDIA_TYPES = {
-    "audio/wav",
+VOICE_MEDIA_TYPE_SUFFIXES = {
+    "audio/wav": ".wav",
+    "audio/x-wav": ".wav",
+    "audio/webm": ".webm",
+    "audio/mp4": ".mp4",
+    "audio/mpeg": ".mp3",
+    "audio/m4a": ".m4a",
+    "audio/x-m4a": ".m4a",
 }
+
+SUPPORTED_VOICE_MEDIA_TYPES = set(
+    VOICE_MEDIA_TYPE_SUFFIXES
+)
 
 
 @dataclass(frozen=True)
@@ -36,6 +46,40 @@ class SupportsVoiceTranscriber(Protocol):
         recording: VoiceRecording,
     ) -> VoiceTranscript:
         """Transcribe one validated voice recording."""
+        ...
+
+
+def normalize_voice_media_type(
+    media_type: str,
+) -> str:
+    """Return a normalized browser audio media type."""
+    return (
+        media_type
+        .strip()
+        .lower()
+        .split(";", maxsplit=1)[0]
+        .strip()
+    )
+
+
+def voice_media_type_suffix(
+    media_type: str,
+) -> str:
+    """Return the audio-file suffix for one supported media type."""
+    normalized_media_type = (
+        normalize_voice_media_type(
+            media_type
+        )
+    )
+
+    try:
+        return VOICE_MEDIA_TYPE_SUFFIXES[
+            normalized_media_type
+        ]
+    except KeyError as error:
+        raise ValueError(
+            "Unsupported voice recording format."
+        ) from error
 
 
 def prepare_voice_recording(
@@ -68,12 +112,20 @@ def prepare_voice_recording(
             "The maximum supported size is 10 MB."
         )
 
-    normalized_media_type = media_type.strip().lower()
+    normalized_media_type = (
+        normalize_voice_media_type(
+            media_type
+        )
+    )
 
-    if normalized_media_type not in SUPPORTED_VOICE_MEDIA_TYPES:
+    if (
+        normalized_media_type
+        not in SUPPORTED_VOICE_MEDIA_TYPES
+    ):
         raise ValueError(
             "Unsupported voice recording format. "
-            "Browser voice recordings must use WAV audio."
+            "Supported browser audio includes "
+            "WAV, WebM, MP4/M4A, and MP3."
         )
 
     return VoiceRecording(
