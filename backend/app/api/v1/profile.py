@@ -14,6 +14,9 @@ from fastapi import (
     UploadFile,
     status,
 )
+
+from starlette.concurrency import run_in_threadpool
+
 from pydantic import (
     BaseModel,
     Field,
@@ -247,7 +250,8 @@ async def extract_document_profile(
     ).strip()
 
     try:
-        result = profile_provider.extract_document(
+        result = await run_in_threadpool(
+            profile_provider.extract_document,
             user=current_user,
             filename=filename,
             content=content,
