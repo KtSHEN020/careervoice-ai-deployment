@@ -10,6 +10,7 @@ dependencies = [
     "fastapi>=0.141.1",
     "job-listing-collector==0.1.0",
     "preference-aware-job-recommender==0.1.0",
+    "python-multipart>=0.0.32",
     "uvicorn>=0.52.1",
     "voice-career-profile-extractor==0.1.0",
 ]

@@ -8,7 +8,11 @@ from fastapi.testclient import TestClient
 from careervoice_ai_web_app.ai_usage import (
     AIUsageLimitError,
 )
+from careervoice_ai_web_app.document_input import (
+    MAX_DOCUMENT_BYTES,
+)
 from careervoice_ai_web_app.public_limits import (
+    MAX_ADDITIONAL_PREFERENCES_CHARACTERS,
     MAX_CAREER_TEXT_CHARACTERS,
 )
 from careervoice_ai_web_app.user_models import AppUser
@@ -57,6 +61,9 @@ class FakeProfileExtractionProvider:
         self.calls: list[
             dict[str, object]
         ] = []
+        self.document_calls: list[
+            dict[str, object]
+        ] = []
 
     def extract_text(
         self,
@@ -75,6 +82,67 @@ class FakeProfileExtractionProvider:
                 "extractor": extractor,
                 "output_language": (
                     output_language
+                ),
+            }
+        )
+
+        if self.quota_exhausted:
+            raise AIUsageLimitError(
+                "No allowance remains."
+            )
+
+        return TextProfileExtraction(
+            profile={
+                "target_roles": [
+                    "backend developer",
+                ],
+                "skills": [
+                    "Python",
+                ],
+                "experience_level": "junior",
+                "preferred_locations": [
+                    "Adelaide",
+                ],
+                "preferred_work_types": [
+                    "hybrid",
+                ],
+                "liked_areas": [
+                    "backend development",
+                ],
+                "disliked_areas": [],
+                "hard_constraints": [],
+                "career_goals": [],
+                "notes": [],
+            },
+            extractor=extractor,
+            output_language=output_language,
+        )
+
+    def extract_document(
+        self,
+        *,
+        user: AppUser,
+        filename: str,
+        content: bytes,
+        additional_preferences: str,
+        extractor: str,
+        output_language: str,
+        allow_image_recognition: bool = False,
+    ) -> TextProfileExtraction:
+        self.document_calls.append(
+            {
+                "user": user,
+                "filename": filename,
+                "content": content,
+                "additional_preferences": (
+                    additional_preferences
+                ),
+                "extractor": extractor,
+                "output_language": (
+                    output_language
+                ),
+                "allow_image_recognition": (
+                    allow_image_recognition
                 ),
             }
         )
@@ -424,3 +492,276 @@ def test_runtime_profile_endpoint_fails_closed_without_configuration() -> None:
     )
 
     assert response.status_code == 503
+
+
+def test_document_profile_extraction_requires_authentication() -> None:
+    user = create_user()
+    provider = FakeProfileExtractionProvider()
+
+    app = create_app(
+        BackendSettings(
+            environment="test",
+        ),
+        current_user_resolver=(
+            FakeCurrentUserResolver(
+                user=user
+            )
+        ),
+        profile_extraction_provider=provider,
+    )
+
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/v1/profile/extract-document",
+        data={
+            "extractor": "rules",
+            "output_language": "en",
+        },
+        files={
+            "document": (
+                "resume.txt",
+                b"Python developer",
+                "text/plain",
+            ),
+        },
+    )
+
+    assert response.status_code == 401
+    assert provider.document_calls == []
+
+
+def test_document_profile_extraction_returns_structured_profile() -> None:
+    user = create_user()
+    provider = FakeProfileExtractionProvider()
+
+    app = create_app(
+        BackendSettings(
+            environment="test",
+        ),
+        current_user_resolver=(
+            FakeCurrentUserResolver(
+                user=user
+            )
+        ),
+        profile_extraction_provider=provider,
+    )
+
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/v1/profile/extract-document",
+        headers={
+            "Authorization": (
+                "Bearer valid-test-token"
+            ),
+        },
+        data={
+            "extractor": "llm",
+            "output_language": "zh-CN",
+            "additional_preferences": (
+                "I want backend roles in Adelaide."
+            ),
+            "allow_image_recognition": "true",
+        },
+        files={
+            "document": (
+                "resume.pdf",
+                b"fake-pdf-content",
+                "application/pdf",
+            ),
+        },
+    )
+
+    assert response.status_code == 200
+
+    assert response.json() == {
+        "profile": {
+            "target_roles": [
+                "backend developer",
+            ],
+            "skills": [
+                "Python",
+            ],
+            "experience_level": "junior",
+            "preferred_locations": [
+                "Adelaide",
+            ],
+            "preferred_work_types": [
+                "hybrid",
+            ],
+            "liked_areas": [
+                "backend development",
+            ],
+            "disliked_areas": [],
+            "hard_constraints": [],
+            "career_goals": [],
+            "notes": [],
+        },
+        "extractor": "llm",
+        "output_language": "zh-CN",
+    }
+
+    assert provider.document_calls == [
+        {
+            "user": user,
+            "filename": "resume.pdf",
+            "content": b"fake-pdf-content",
+            "additional_preferences": (
+                "I want backend roles in Adelaide."
+            ),
+            "extractor": "llm",
+            "output_language": "zh-CN",
+            "allow_image_recognition": True,
+        }
+    ]
+
+
+def test_document_profile_extraction_rejects_oversized_upload() -> None:
+    user = create_user()
+    provider = FakeProfileExtractionProvider()
+
+    app = create_app(
+        BackendSettings(
+            environment="test",
+        ),
+        current_user_resolver=(
+            FakeCurrentUserResolver(
+                user=user
+            )
+        ),
+        profile_extraction_provider=provider,
+    )
+
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/v1/profile/extract-document",
+        headers={
+            "Authorization": (
+                "Bearer valid-test-token"
+            ),
+        },
+        data={
+            "extractor": "rules",
+            "output_language": "en",
+        },
+        files={
+            "document": (
+                "resume.txt",
+                b"x" * (MAX_DOCUMENT_BYTES + 1),
+                "text/plain",
+            ),
+        },
+    )
+
+    assert response.status_code == 413
+
+    assert response.json() == {
+        "detail": (
+            "The uploaded document is too large. "
+            "The maximum supported size is 5 MB."
+        )
+    }
+
+    assert provider.document_calls == []
+
+
+def test_document_profile_extraction_enforces_preferences_limit() -> None:
+    user = create_user()
+    provider = FakeProfileExtractionProvider()
+
+    app = create_app(
+        BackendSettings(
+            environment="test",
+        ),
+        current_user_resolver=(
+            FakeCurrentUserResolver(
+                user=user
+            )
+        ),
+        profile_extraction_provider=provider,
+    )
+
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/v1/profile/extract-document",
+        headers={
+            "Authorization": (
+                "Bearer valid-test-token"
+            ),
+        },
+        data={
+            "extractor": "rules",
+            "output_language": "en",
+            "additional_preferences": (
+                "x"
+                * (
+                    MAX_ADDITIONAL_PREFERENCES_CHARACTERS
+                    + 1
+                )
+            ),
+        },
+        files={
+            "document": (
+                "resume.txt",
+                b"Python developer",
+                "text/plain",
+            ),
+        },
+    )
+
+    assert response.status_code == 422
+    assert provider.document_calls == []
+
+
+def test_document_profile_extraction_returns_429_when_ai_quota_is_exhausted() -> None:
+    user = create_user()
+
+    provider = FakeProfileExtractionProvider(
+        quota_exhausted=True
+    )
+
+    app = create_app(
+        BackendSettings(
+            environment="test",
+        ),
+        current_user_resolver=(
+            FakeCurrentUserResolver(
+                user=user
+            )
+        ),
+        profile_extraction_provider=provider,
+    )
+
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/v1/profile/extract-document",
+        headers={
+            "Authorization": (
+                "Bearer valid-test-token"
+            ),
+        },
+        data={
+            "extractor": "llm",
+            "output_language": "en",
+        },
+        files={
+            "document": (
+                "resume.txt",
+                b"Python developer",
+                "text/plain",
+            ),
+        },
+    )
+
+    assert response.status_code == 429
+
+    assert response.json() == {
+        "detail": (
+            "Daily AI allowance is insufficient "
+            "for this request."
+        )
+    }

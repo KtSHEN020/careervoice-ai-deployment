@@ -22,6 +22,14 @@ export interface ProfileExtractionRequest {
   output_language: OutputLanguage
 }
 
+export interface DocumentProfileExtractionRequest {
+  document: File
+  extractor: ProfileExtractor
+  output_language: OutputLanguage
+  additional_preferences?: string
+  allow_image_recognition?: boolean
+}
+
 export interface ProfileExtractionResponse {
   profile: CareerProfile
   extractor: ProfileExtractor
@@ -41,6 +49,50 @@ export function extractCareerProfile(
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(request),
+    },
+  )
+}
+
+export function extractCareerProfileFromDocument(
+  accessToken: string,
+  request: DocumentProfileExtractionRequest,
+): Promise<ProfileExtractionResponse> {
+  const formData = new FormData()
+
+  formData.append(
+    'document',
+    request.document,
+  )
+
+  formData.append(
+    'extractor',
+    request.extractor,
+  )
+
+  formData.append(
+    'output_language',
+    request.output_language,
+  )
+
+  formData.append(
+    'additional_preferences',
+    request.additional_preferences ?? '',
+  )
+
+  formData.append(
+    'allow_image_recognition',
+    String(
+      request.allow_image_recognition
+        ?? false,
+    ),
+  )
+
+  return apiRequest<ProfileExtractionResponse>(
+    '/api/v1/profile/extract-document',
+    {
+      method: 'POST',
+      accessToken,
+      body: formData,
     },
   )
 }

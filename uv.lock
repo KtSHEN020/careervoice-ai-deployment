@@ -88,6 +88,7 @@ dependencies = [
     { name = "fastapi" },
     { name = "job-listing-collector" },
     { name = "preference-aware-job-recommender" },
+    { name = "python-multipart" },
     { name = "uvicorn" },
     { name = "voice-career-profile-extractor" },
 ]
@@ -106,6 +107,7 @@ requires-dist = [
     { name = "fastapi", specifier = ">=0.141.1" },
     { name = "job-listing-collector", directory = "packages/job-listing-collector" },
     { name = "preference-aware-job-recommender", directory = "packages/preference-aware-job-recommender" },
+    { name = "python-multipart", specifier = ">=0.0.32" },
     { name = "uvicorn", specifier = ">=0.52.1" },
     { name = "voice-career-profile-extractor", directory = "packages/voice-career-profile-extractor" },
 ]

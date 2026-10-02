@@ -7,8 +7,11 @@ from typing import Annotated, Literal
 from fastapi import (
     APIRouter,
     Depends,
+    File,
+    Form,
     HTTPException,
     Request,
+    UploadFile,
     status,
 )
 from pydantic import (
@@ -20,7 +23,11 @@ from pydantic import (
 from careervoice_ai_web_app.ai_usage import (
     AIUsageLimitError,
 )
+from careervoice_ai_web_app.document_input import (
+    MAX_DOCUMENT_BYTES,
+)
 from careervoice_ai_web_app.public_limits import (
+    MAX_ADDITIONAL_PREFERENCES_CHARACTERS,
     MAX_CAREER_TEXT_CHARACTERS,
 )
 from careervoice_ai_web_app.user_models import AppUser
@@ -109,10 +116,28 @@ def get_profile_extraction_provider(
     if provider is None:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Profile extraction service is unavailable.",
+            detail=(
+                "Profile extraction service is unavailable."
+            ),
         )
 
     return provider
+
+
+def build_profile_response(
+    *,
+    profile: dict[str, object],
+    extractor: str,
+    output_language: str,
+) -> TextProfileExtractionResponse:
+    """Build the canonical API response for profile extraction."""
+    return TextProfileExtractionResponse(
+        profile=CareerProfileResponse(
+            **profile
+        ),
+        extractor=extractor,
+        output_language=output_language,
+    )
 
 
 @router.post(
@@ -149,10 +174,108 @@ def extract_text_profile(
             ),
         ) from exc
 
-    return TextProfileExtractionResponse(
-        profile=CareerProfileResponse(
-            **result.profile
+    return build_profile_response(
+        profile=result.profile,
+        extractor=result.extractor,
+        output_language=result.output_language,
+    )
+
+
+@router.post(
+    "/profile/extract-document",
+    response_model=TextProfileExtractionResponse,
+)
+async def extract_document_profile(
+    current_user: Annotated[
+        AppUser,
+        Depends(get_current_user),
+    ],
+    profile_provider: Annotated[
+        ProfileExtractionProvider,
+        Depends(get_profile_extraction_provider),
+    ],
+    document: Annotated[
+        UploadFile,
+        File(),
+    ],
+    extractor: Annotated[
+        Literal[
+            "rules",
+            "llm",
+        ],
+        Form(),
+    ],
+    output_language: Annotated[
+        Literal[
+            "en",
+            "zh-CN",
+        ],
+        Form(),
+    ],
+    additional_preferences: Annotated[
+        str,
+        Form(
+            max_length=(
+                MAX_ADDITIONAL_PREFERENCES_CHARACTERS
+            )
         ),
+    ] = "",
+    allow_image_recognition: Annotated[
+        bool,
+        Form(),
+    ] = False,
+) -> TextProfileExtractionResponse:
+    """Extract a career profile from an uploaded document."""
+    try:
+        content = await document.read(
+            MAX_DOCUMENT_BYTES + 1
+        )
+    finally:
+        await document.close()
+
+    if len(content) > MAX_DOCUMENT_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+            detail=(
+                "The uploaded document is too large. "
+                "The maximum supported size is 5 MB."
+            ),
+        )
+
+    filename = (
+        document.filename or ""
+    ).strip()
+
+    try:
+        result = profile_provider.extract_document(
+            user=current_user,
+            filename=filename,
+            content=content,
+            additional_preferences=(
+                additional_preferences
+            ),
+            extractor=extractor,
+            output_language=output_language,
+            allow_image_recognition=(
+                allow_image_recognition
+            ),
+        )
+    except AIUsageLimitError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=(
+                "Daily AI allowance is insufficient "
+                "for this request."
+            ),
+        ) from exc
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=str(exc),
+        ) from exc
+
+    return build_profile_response(
+        profile=result.profile,
         extractor=result.extractor,
         output_language=result.output_language,
     )

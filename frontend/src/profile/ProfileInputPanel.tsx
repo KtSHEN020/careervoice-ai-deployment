@@ -1,4 +1,5 @@
 import {
+  useRef,
   useState,
   type FormEvent,
 } from 'react'
@@ -6,6 +7,7 @@ import {
 import { ApiError } from '../api/client'
 import {
   extractCareerProfile,
+  extractCareerProfileFromDocument,
   type ProfileExtractionResponse,
 } from '../api/profile'
 import type { CareerVoiceSession } from '../auth/careervoice-session'
@@ -26,11 +28,20 @@ interface ProfileInputPanelProps {
   ) => void
 }
 
+type ProfileInputMode =
+  | 'text'
+  | 'document'
+
 const MAX_CAREER_TEXT_CHARACTERS = 12_000
+const MAX_ADDITIONAL_PREFERENCES_CHARACTERS =
+  4_000
+const MAX_DOCUMENT_BYTES =
+  5 * 1024 * 1024
 
 function extractionErrorMessage(
   error: unknown,
   language: AppLanguage,
+  inputMode: ProfileInputMode,
 ): string {
   const text =
     UI_TEXT[language].profile.errors
@@ -44,8 +55,14 @@ function extractionErrorMessage(
       return text.denied
     }
 
+    if (error.status === 413) {
+      return text.documentTooLarge
+    }
+
     if (error.status === 422) {
-      return text.invalid
+      return inputMode === 'document'
+        ? text.documentInvalid
+        : text.invalid
     }
 
     if (error.status === 429) {
@@ -68,10 +85,33 @@ export function ProfileInputPanel({
   const text =
     UI_TEXT[language].profile
 
+  const documentInputRef =
+    useRef<HTMLInputElement>(null)
+
   const [draft, setDraft] =
     useState<ProfileDraft>(
       DEFAULT_PROFILE_DRAFT,
     )
+
+  const [
+    inputMode,
+    setInputMode,
+  ] = useState<ProfileInputMode>('text')
+
+  const [
+    documentFile,
+    setDocumentFile,
+  ] = useState<File | null>(null)
+
+  const [
+    additionalPreferences,
+    setAdditionalPreferences,
+  ] = useState('')
+
+  const [
+    allowImageRecognition,
+    setAllowImageRecognition,
+  ] = useState(false)
 
   const [isSubmitting, setIsSubmitting] =
     useState(false)
@@ -82,6 +122,20 @@ export function ProfileInputPanel({
   const [statusMessage, setStatusMessage] =
     useState('')
 
+  const selectedDocumentIsPdf =
+    documentFile?.name
+      .toLowerCase()
+      .endsWith('.pdf')
+    ?? false
+
+  function handleInputModeChange(
+    nextMode: ProfileInputMode,
+  ) {
+    setInputMode(nextMode)
+    setErrorMessage('')
+    setStatusMessage('')
+  }
+
   async function handleSubmit(
     event: FormEvent<HTMLFormElement>,
   ) {
@@ -90,31 +144,72 @@ export function ProfileInputPanel({
     setErrorMessage('')
     setStatusMessage('')
 
-    const careerText =
-      draft.careerText.trim()
+    if (inputMode === 'text') {
+      const careerText =
+        draft.careerText.trim()
 
-    if (!careerText) {
-      setErrorMessage(
-        text.errors.empty,
-      )
-      return
+      if (!careerText) {
+        setErrorMessage(
+          text.errors.empty,
+        )
+
+        return
+      }
+    } else {
+      if (documentFile === null) {
+        setErrorMessage(
+          text.errors.documentMissing,
+        )
+
+        return
+      }
+
+      if (
+        documentFile.size
+        > MAX_DOCUMENT_BYTES
+      ) {
+        setErrorMessage(
+          text.errors.documentTooLarge,
+        )
+
+        return
+      }
     }
 
     setIsSubmitting(true)
 
     try {
+      const accessToken =
+        session.supabaseSession.access_token
+
       const result =
-        await extractCareerProfile(
-          session.supabaseSession.access_token,
-          {
-            career_preference_text:
-              careerText,
-            extractor:
-              draft.extractor,
-            output_language:
-              language,
-          },
-        )
+        inputMode === 'text'
+          ? await extractCareerProfile(
+              accessToken,
+              {
+                career_preference_text:
+                  draft.careerText.trim(),
+                extractor:
+                  draft.extractor,
+                output_language:
+                  language,
+              },
+            )
+          : await extractCareerProfileFromDocument(
+              accessToken,
+              {
+                document:
+                  documentFile as File,
+                extractor:
+                  draft.extractor,
+                output_language:
+                  language,
+                additional_preferences:
+                  additionalPreferences.trim(),
+                allow_image_recognition:
+                  allowImageRecognition,
+              },
+            )
 
       onProfileExtracted(result)
 
@@ -126,6 +221,7 @@ export function ProfileInputPanel({
         extractionErrorMessage(
           error,
           language,
+          inputMode,
         ),
       )
     } finally {
@@ -155,35 +251,213 @@ export function ProfileInputPanel({
         className="profile-form"
         onSubmit={handleSubmit}
       >
-        <label htmlFor="career-information">
-          {text.information}
-        </label>
+        <fieldset className="profile-input-mode">
+          <legend>
+            {text.inputMethod}
+          </legend>
 
-        <textarea
-          id="career-information"
-          name="career-information"
-          rows={9}
-          maxLength={
-            MAX_CAREER_TEXT_CHARACTERS
-          }
-          value={draft.careerText}
-          disabled={isSubmitting}
-          placeholder={text.placeholder}
-          onChange={(event) => {
-            setDraft((current) => ({
-              ...current,
-              careerText:
-                event.target.value,
-            }))
-          }}
-          required
-        />
+          <div className="profile-input-mode-buttons">
+            <button
+              className={
+                inputMode === 'text'
+                  ? 'profile-input-mode-button profile-input-mode-button-active'
+                  : 'profile-input-mode-button'
+              }
+              type="button"
+              aria-pressed={
+                inputMode === 'text'
+              }
+              disabled={isSubmitting}
+              onClick={() => {
+                handleInputModeChange(
+                  'text',
+                )
+              }}
+            >
+              {text.textInput}
+            </button>
 
-        <div className="profile-character-count">
-          {draft.careerText.length.toLocaleString()}
-          {' / '}
-          {MAX_CAREER_TEXT_CHARACTERS.toLocaleString()}
-        </div>
+            <button
+              className={
+                inputMode === 'document'
+                  ? 'profile-input-mode-button profile-input-mode-button-active'
+                  : 'profile-input-mode-button'
+              }
+              type="button"
+              aria-pressed={
+                inputMode === 'document'
+              }
+              disabled={isSubmitting}
+              onClick={() => {
+                handleInputModeChange(
+                  'document',
+                )
+              }}
+            >
+              {text.documentInput}
+            </button>
+          </div>
+        </fieldset>
+
+        {inputMode === 'text' ? (
+          <>
+            <label htmlFor="career-information">
+              {text.information}
+            </label>
+
+            <textarea
+              id="career-information"
+              name="career-information"
+              rows={9}
+              maxLength={
+                MAX_CAREER_TEXT_CHARACTERS
+              }
+              value={draft.careerText}
+              disabled={isSubmitting}
+              placeholder={text.placeholder}
+              onChange={(event) => {
+                setDraft((current) => ({
+                  ...current,
+                  careerText:
+                    event.target.value,
+                }))
+              }}
+              required
+            />
+
+            <div className="profile-character-count">
+              {draft.careerText.length.toLocaleString()}
+              {' / '}
+              {MAX_CAREER_TEXT_CHARACTERS.toLocaleString()}
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="profile-field">
+              <span className="profile-field-label">
+                {text.document}
+              </span>
+
+              <input
+                ref={documentInputRef}
+                id="career-document"
+                name="career-document"
+                className="profile-file-input"
+                type="file"
+                accept=".txt,.pdf,.docx"
+                disabled={isSubmitting}
+                onChange={(event) => {
+                  const file =
+                    event.target.files?.[0]
+                    ?? null
+
+                  setDocumentFile(file)
+
+                  if (
+                    !file?.name
+                      .toLowerCase()
+                      .endsWith('.pdf')
+                  ) {
+                    setAllowImageRecognition(
+                      false,
+                    )
+                  }
+
+                  setErrorMessage('')
+                  setStatusMessage('')
+                }}
+              />
+
+              <div className="profile-file-control">
+                <button
+                  className="secondary-button profile-file-button"
+                  type="button"
+                  disabled={isSubmitting}
+                  onClick={() => {
+                    documentInputRef.current?.click()
+                  }}
+                >
+                  {text.chooseFile}
+                </button>
+
+                <span
+                  className={
+                    documentFile === null
+                      ? 'profile-file-name profile-file-name-empty'
+                      : 'profile-file-name'
+                  }
+                >
+                  {documentFile?.name
+                    ?? text.noFileSelected}
+                </span>
+              </div>
+
+              <p className="profile-help">
+                {text.documentHelp}
+              </p>
+            </div>
+
+            <div className="profile-field">
+              <label htmlFor="additional-preferences">
+                {text.additionalPreferences}
+              </label>
+
+              <textarea
+                id="additional-preferences"
+                name="additional-preferences"
+                rows={5}
+                maxLength={
+                  MAX_ADDITIONAL_PREFERENCES_CHARACTERS
+                }
+                value={
+                  additionalPreferences
+                }
+                disabled={isSubmitting}
+                placeholder={
+                  text.additionalPreferencesPlaceholder
+                }
+                onChange={(event) => {
+                  setAdditionalPreferences(
+                    event.target.value,
+                  )
+                }}
+              />
+
+              <div className="profile-character-count">
+                {additionalPreferences.length.toLocaleString()}
+                {' / '}
+                {MAX_ADDITIONAL_PREFERENCES_CHARACTERS.toLocaleString()}
+              </div>
+            </div>
+
+            {selectedDocumentIsPdf && (
+              <label className="profile-checkbox">
+                <input
+                  type="checkbox"
+                  checked={
+                    allowImageRecognition
+                  }
+                  disabled={isSubmitting}
+                  onChange={(event) => {
+                    setAllowImageRecognition(
+                      event.target.checked,
+                    )
+                  }}
+                />
+
+                <span>
+                  <strong>
+                    {text.imageRecognition}
+                  </strong>
+
+                  <span className="profile-checkbox-help">
+                    {text.imageRecognitionHelp}
+                  </span>
+                </span>
+              </label>
+            )}
+          </>
+        )}
 
         <div className="profile-options">
           <div className="profile-field">
@@ -218,13 +492,19 @@ export function ProfileInputPanel({
         </div>
 
         {statusMessage && (
-          <p className="profile-message profile-message-success">
+          <p
+            className="profile-message profile-message-success"
+            role="status"
+          >
             {statusMessage}
           </p>
         )}
 
         {errorMessage && (
-          <p className="profile-message profile-message-error">
+          <p
+            className="profile-message profile-message-error"
+            role="alert"
+          >
             {errorMessage}
           </p>
         )}

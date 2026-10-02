@@ -29,6 +29,19 @@ class SupportsProfileWorkflow(Protocol):
         """Extract a structured profile from text."""
         ...
 
+    def extract_document_profile(
+        self,
+        *,
+        filename: str,
+        content: bytes,
+        additional_preferences: str,
+        extractor: str,
+        workspace: SessionWorkspace,
+        allow_image_recognition: bool = False,
+    ) -> ProfileExtractionResult:
+        """Extract a structured profile from a career document."""
+        ...
+
 
 class SupportsProfileWorkflowFactory(Protocol):
     """Build a user-specific CareerVoice workflow."""
@@ -66,6 +79,20 @@ class ProfileExtractionProvider(Protocol):
         """Extract a structured career profile from text."""
         ...
 
+    def extract_document(
+        self,
+        *,
+        user: AppUser,
+        filename: str,
+        content: bytes,
+        additional_preferences: str,
+        extractor: str,
+        output_language: str,
+        allow_image_recognition: bool = False,
+    ) -> TextProfileExtraction:
+        """Extract a structured career profile from a document."""
+        ...
+
 
 @dataclass
 class ProfileExtractionService:
@@ -88,25 +115,7 @@ class ProfileExtractionService:
             output_language=output_language,
         )
 
-        temporary_root: str | None = None
-
-        if self.temporary_root is not None:
-            self.temporary_root.mkdir(
-                parents=True,
-                exist_ok=True,
-            )
-            temporary_root = str(
-                self.temporary_root
-            )
-
-        with TemporaryDirectory(
-            prefix="careervoice-api-profile-",
-            dir=temporary_root,
-        ) as temporary_directory:
-            workspace = SessionWorkspace.create(
-                root_dir=temporary_directory,
-            )
-
+        with self._workspace() as workspace:
             result = workflow.extract_text_profile(
                 career_preference_text=(
                     career_preference_text
@@ -124,3 +133,101 @@ class ProfileExtractionService:
             extractor=result.extractor,
             output_language=output_language.strip(),
         )
+
+    def extract_document(
+        self,
+        *,
+        user: AppUser,
+        filename: str,
+        content: bytes,
+        additional_preferences: str,
+        extractor: str,
+        output_language: str,
+        allow_image_recognition: bool = False,
+    ) -> TextProfileExtraction:
+        """Extract a career profile from an uploaded document."""
+        workflow = self.workflow_factory(
+            user=user,
+            output_language=output_language,
+        )
+
+        with self._workspace() as workspace:
+            result = workflow.extract_document_profile(
+                filename=filename,
+                content=content,
+                additional_preferences=(
+                    additional_preferences
+                ),
+                extractor=extractor,
+                workspace=workspace,
+                allow_image_recognition=(
+                    allow_image_recognition
+                ),
+            )
+
+            profile = dict(
+                result.review.profile
+            )
+
+        return TextProfileExtraction(
+            profile=profile,
+            extractor=result.extractor,
+            output_language=output_language.strip(),
+        )
+
+    def _workspace(
+        self,
+    ) -> _TemporaryProfileWorkspace:
+        """Create one isolated temporary profile workspace."""
+        return _TemporaryProfileWorkspace(
+            temporary_root=self.temporary_root,
+        )
+
+
+class _TemporaryProfileWorkspace:
+    """Context manager for one temporary CareerVoice workspace."""
+
+    def __init__(
+        self,
+        *,
+        temporary_root: Path | None,
+    ) -> None:
+        self._temporary_root = temporary_root
+        self._temporary_directory: (
+            TemporaryDirectory[str] | None
+        ) = None
+
+    def __enter__(
+        self,
+    ) -> SessionWorkspace:
+        temporary_root: str | None = None
+
+        if self._temporary_root is not None:
+            self._temporary_root.mkdir(
+                parents=True,
+                exist_ok=True,
+            )
+
+            temporary_root = str(
+                self._temporary_root
+            )
+
+        self._temporary_directory = (
+            TemporaryDirectory(
+                prefix="careervoice-api-profile-",
+                dir=temporary_root,
+            )
+        )
+
+        return SessionWorkspace.create(
+            root_dir=self._temporary_directory.name,
+        )
+
+    def __exit__(
+        self,
+        exc_type: object,
+        exc_value: object,
+        traceback: object,
+    ) -> None:
+        if self._temporary_directory is not None:
+            self._temporary_directory.cleanup()

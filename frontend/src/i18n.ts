@@ -130,18 +130,45 @@ export const UI_TEXT = {
       title: 'Build your career profile',
       description:
         'Add your experience, skills, preferences, and career goals.',
+
+      inputMethod: 'Input method',
+      textInput: 'Text',
+      documentInput: 'Document',
+
       information: 'Career information',
       placeholder:
         'For example: Junior software developer with Python and React experience, looking for backend roles in Adelaide.',
+
+      document: 'Career document',
+      chooseFile: 'Choose file',
+      noFileSelected: 'No file selected',
+      documentHelp:
+        'Upload a TXT, PDF, or DOCX file up to 5 MB.',
+      additionalPreferences:
+        'Additional preferences (optional)',
+      additionalPreferencesPlaceholder:
+        'For example: I prefer junior backend roles in Adelaide and hybrid work.',
+      imageRecognition:
+        'Use AI recognition if this PDF is scanned',
+      imageRecognitionHelp:
+        'Only used when the PDF has no selectable text. Uses 1 AI unit if recognition runs.',
+
       extractionMethod: 'Profile extraction',
       standard: 'Standard',
       aiAssisted: 'AI-assisted',
       extract: 'Extract career profile',
       extracting: 'Extracting profile…',
       success: 'Profile ready to review.',
+
       errors: {
         empty:
           'Enter some career information before continuing.',
+        documentMissing:
+          'Choose a career document before continuing.',
+        documentTooLarge:
+          'The document must be 5 MB or smaller.',
+        documentInvalid:
+          'The uploaded document could not be processed. Check the file and try again.',
         expired:
           'Your session has expired. Please sign in again.',
         denied:
@@ -473,19 +500,46 @@ export const UI_TEXT = {
       step: '步骤 1',
       title: '建立你的职业画像',
       description:
-      '填写你的经历、技能、偏好和职业目标。',
+        '填写你的经历、技能、偏好和职业目标。',
+
+      inputMethod: '输入方式',
+      textInput: '文字',
+      documentInput: '文档',
+
       information: '职业信息与偏好',
       placeholder:
-      '例如：初级软件开发人员，掌握 Python 和 React，希望在阿德莱德寻找后端岗位……',
+        '例如：初级软件开发人员，掌握 Python 和 React，希望在阿德莱德寻找后端岗位……',
+
+      document: '职业文档',
+      chooseFile: '选择文件',
+      noFileSelected: '尚未选择文件',
+      documentHelp:
+        '上传不超过 5 MB 的 TXT、PDF 或 DOCX 文件。',
+      additionalPreferences:
+        '补充偏好（可选）',
+      additionalPreferencesPlaceholder:
+        '例如：希望在阿德莱德寻找初级后端岗位，并偏好混合办公。',
+      imageRecognition:
+        '如果 PDF 是扫描件，使用 AI 识别',
+      imageRecognitionHelp:
+        '仅在 PDF 没有可选文字时使用；实际进行识别时消耗 1 个 AI 单位。',
+
       extractionMethod: '职业画像生成方式',
       standard: '标准',
       aiAssisted: 'AI 辅助',
       extract: '生成职业画像',
       extracting: '正在生成职业画像…',
       success: '职业画像已生成，可以开始检查。',
+
       errors: {
         empty:
           '请输入职业信息后再继续。',
+        documentMissing:
+          '请选择职业文档后再继续。',
+        documentTooLarge:
+          '文档大小不能超过 5 MB。',
+        documentInvalid:
+          '无法处理上传的文档，请检查文件后重试。',
         expired:
           '登录状态已失效，请重新登录。',
         denied:
