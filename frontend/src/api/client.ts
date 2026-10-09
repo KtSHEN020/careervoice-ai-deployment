@@ -1,3 +1,4 @@
+import { getCurrentSession } from '../auth/session'
 import { API_BASE_URL } from '../config'
 
 export class ApiError extends Error {
@@ -18,7 +19,9 @@ export async function apiRequest<T>(
   path: string,
   options: ApiRequestOptions = {},
 ): Promise<T> {
-  const normalizedPath = path.startsWith('/') ? path : `/${path}`
+  const normalizedPath = path.startsWith('/')
+    ? path
+    : `/${path}`
 
   const {
     accessToken,
@@ -31,9 +34,21 @@ export async function apiRequest<T>(
   requestHeaders.set('Accept', 'application/json')
 
   if (accessToken) {
+    // React may hold an older token after Supabase refreshes
+    // the session. Resolve the current token before sending
+    // an authenticated API request.
+    const currentSession = await getCurrentSession()
+
+    if (currentSession === null) {
+      throw new ApiError(
+        'The authentication session is no longer available.',
+        401,
+      )
+    }
+
     requestHeaders.set(
       'Authorization',
-      `Bearer ${accessToken}`,
+      `Bearer ${currentSession.access_token}`,
     )
   }
 

@@ -1,4 +1,8 @@
-import { useState } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useState,
+} from 'react'
 
 import './App.css'
 
@@ -33,6 +37,11 @@ import {
 } from './recommendations/RecommendationResultsPanel'
 import type { AppStep } from './navigation/app-step'
 import { AppTopbar } from './layout/AppTopbar'
+import { getSupabaseClient } from './auth/supabase'
+
+import {
+  classifySessionEvent,
+} from './auth/session-events'
 
 function App() {
   const [language, setLanguage] =
@@ -94,6 +103,77 @@ function App() {
 ] = useState<AppStep>('profile')
 
   const text = UI_TEXT[language]
+  const resetAuthenticatedWorkflow = useCallback(() => {
+    setCareerVoiceSession(null)
+    setExtractedProfile(null)
+    setProfileConfirmed(false)
+    setJobSearchResult(null)
+    setRecommendationResult(null)
+    setActiveStep('profile')
+    setSidebarOpen(true)
+    setSignOutError('')
+  }, [])
+
+  const currentUserId =
+    careerVoiceSession?.supabaseSession.user.id ?? null
+
+  useEffect(() => {
+    // AuthPanel handles login and initial session restoration.
+    // Subscribe here only after CareerVoice authorization succeeds.
+    if (currentUserId === null) {
+      return
+    }
+
+    const {
+      data: { subscription },
+    } = getSupabaseClient().auth.onAuthStateChange(
+      (event, supabaseSession) => {
+        const action = classifySessionEvent(
+          event,
+          supabaseSession,
+          currentUserId,
+        )
+
+        if (action === 'reset') {
+          // Sign-out or a different Supabase identity.
+          // Clear profile, jobs, recommendations, and login state.
+          resetAuthenticatedWorkflow()
+          return
+        }
+
+        if (
+          action === 'update'
+          && supabaseSession !== null
+        ) {
+          setCareerVoiceSession((current) => {
+            if (
+              current === null
+              || current.supabaseSession.user.id
+                !== supabaseSession.user.id
+            ) {
+              return current
+            }
+
+            if (
+              current.supabaseSession.access_token
+              === supabaseSession.access_token
+            ) {
+              return current
+            }
+
+            return {
+              ...current,
+              supabaseSession,
+            }
+          })
+        }
+      },
+    )
+
+    return () => {
+      subscription.unsubscribe()
+    }
+  }, [currentUserId, resetAuthenticatedWorkflow])
 
   function handleSessionChange(
     session: CareerVoiceSession | null,
@@ -177,17 +257,11 @@ function App() {
 
   async function handleSignOut() {
     setSignOutError('')
-    setActiveStep('profile')
 
     try {
       await signOutCurrentSession()
 
-      setCareerVoiceSession(null)
-      setExtractedProfile(null)
-      setProfileConfirmed(false)
-      setJobSearchResult(null)
-      setSidebarOpen(true)
-      setRecommendationResult(null)
+      resetAuthenticatedWorkflow()
     } catch {
       setSignOutError(
         text.app.signOutError,
