@@ -27,6 +27,10 @@ import type {
   JobSearchResponse,
 } from './api/jobs'
 import { JobSearchPanel } from './jobs/JobSearchPanel'
+import {
+  createJobSearchDraft,
+  type JobSearchDraft,
+} from './jobs/job-search-state'
 import { JobResultsPanel } from './jobs/JobResultsPanel'
 import type {
   RecommendationResponse,
@@ -35,6 +39,10 @@ import { RecommendationPanel } from './recommendations/RecommendationPanel'
 import {
   RecommendationResultsPanel,
 } from './recommendations/RecommendationResultsPanel'
+import {
+  createRecommendationDraft,
+  type RecommendationDraft,
+} from './recommendations/recommendation-state'
 import type { AppStep } from './navigation/app-step'
 import { AppTopbar } from './layout/AppTopbar'
 import { getSupabaseClient } from './auth/supabase'
@@ -77,12 +85,26 @@ function App() {
   )
 
   const [
+    jobSearchDraft,
+    setJobSearchDraft,
+  ] = useState<JobSearchDraft | null>(
+    null,
+  )
+
+  const [
     recommendationResult,
     setRecommendationResult,
   ] =
     useState<RecommendationResponse | null>(
       null,
     )
+
+  const [
+    recommendationDraft,
+    setRecommendationDraft,
+  ] = useState<RecommendationDraft | null>(
+    null,
+  )
 
   const [
     usageRefreshKey,
@@ -108,7 +130,9 @@ function App() {
     setExtractedProfile(null)
     setProfileConfirmed(false)
     setJobSearchResult(null)
+    setJobSearchDraft(null)
     setRecommendationResult(null)
+    setRecommendationDraft(null)
     setActiveStep('profile')
     setSidebarOpen(true)
     setSignOutError('')
@@ -198,9 +222,13 @@ function App() {
     result: ProfileExtractionResponse,
   ) {
     setExtractedProfile(result)
+    setJobSearchDraft(
+      createJobSearchDraft(result.profile),
+    )
     setProfileConfirmed(false)
     setJobSearchResult(null)
     setRecommendationResult(null)
+    setRecommendationDraft(null)
     setActiveStep('profile')
 
     setUsageRefreshKey(
@@ -211,6 +239,9 @@ function App() {
   function handleProfileChange(
     profile: CareerProfile,
   ) {
+    setJobSearchDraft(
+      createJobSearchDraft(profile),
+    )
     setExtractedProfile(
       (current) => {
         if (current === null) {
@@ -227,6 +258,7 @@ function App() {
     setProfileConfirmed(false)
     setJobSearchResult(null)
     setRecommendationResult(null)
+    setRecommendationDraft(null)
     setActiveStep('profile')
   }
 
@@ -235,6 +267,11 @@ function App() {
   ) {
     setJobSearchResult(result)
     setRecommendationResult(null)
+    setRecommendationDraft(
+      createRecommendationDraft(
+        result.jobs.length,
+      ),
+    )
 
     setUsageRefreshKey(
       (current) => current + 1,
@@ -428,20 +465,30 @@ function App() {
 
           {activeStep === 'jobs'
             && canOpenJobs
-            && extractedProfile !== null && (
+            && extractedProfile !== null
+            && jobSearchDraft !== null && (
             <>
               <JobSearchPanel
                 session={careerVoiceSession}
-                profile={
-                  extractedProfile.profile
-                }
+                profile={extractedProfile.profile}
                 language={language}
+                draft={jobSearchDraft}
+                setDraft={(updater) => {
+                  setJobSearchDraft((current) => {
+                    if (current === null) {
+                      return null
+                    }
+
+                    return updater(current)
+                  })
+                }}
                 onSearchComplete={
                   handleJobSearchComplete
                 }
                 onSearchInvalidated={() => {
                   setJobSearchResult(null)
                   setRecommendationResult(null)
+                  setRecommendationDraft(null)
                 }}
               />
 
@@ -483,17 +530,24 @@ function App() {
           {activeStep === 'matches'
             && canOpenMatches
             && extractedProfile !== null
-            && jobSearchResult !== null && (
+            && jobSearchResult !== null
+            && recommendationDraft !== null && (
             <>
               <RecommendationPanel
                 session={careerVoiceSession}
-                profile={
-                  extractedProfile.profile
-                }
-                jobs={
-                  jobSearchResult.jobs
-                }
+                profile={extractedProfile.profile}
+                jobs={jobSearchResult.jobs}
                 language={language}
+                draft={recommendationDraft}
+                setDraft={(updater) => {
+                  setRecommendationDraft((current) => {
+                    if (current === null) {
+                      return null
+                    }
+
+                    return updater(current)
+                  })
+                }}
                 onComplete={
                   handleRecommendationComplete
                 }

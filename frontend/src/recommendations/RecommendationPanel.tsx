@@ -20,8 +20,8 @@ import {
   type AppLanguage,
 } from '../i18n'
 import {
-  createRecommendationDraft,
   MAX_RECOMMENDATIONS,
+  type RecommendationDraft,
 } from './recommendation-state'
 
 interface RecommendationPanelProps {
@@ -29,6 +29,14 @@ interface RecommendationPanelProps {
   profile: CareerProfile
   jobs: NormalizedJob[]
   language: AppLanguage
+
+  draft: RecommendationDraft
+  setDraft: (
+    updater: (
+      current: RecommendationDraft,
+    ) => RecommendationDraft,
+  ) => void
+
   onComplete: (
     result: RecommendationResponse,
   ) => void
@@ -72,6 +80,8 @@ export function RecommendationPanel({
   profile,
   jobs,
   language,
+  draft,
+  setDraft,
   onComplete,
   onInvalidated,
 }: RecommendationPanelProps) {
@@ -92,13 +102,6 @@ export function RecommendationPanel({
       },
       (_, index) => index + 1,
     )
-
-  const [draft, setDraft] = useState(
-    () =>
-      createRecommendationDraft(
-        jobs.length,
-      ),
-  )
 
   const [isSubmitting, setIsSubmitting] =
     useState(false)
@@ -154,14 +157,14 @@ export function RecommendationPanel({
           },
         )
 
-      setDraft({
+      setDraft(() => ({
         scorer:
           result.settings.scorer,
         maxResults:
           result.settings.max_results,
         excludeRejected:
           result.settings.exclude_rejected,
-      })
+      }))
 
       setStatusMessage(
         text.success,

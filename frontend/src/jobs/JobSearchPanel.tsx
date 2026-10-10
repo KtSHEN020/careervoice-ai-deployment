@@ -15,16 +15,22 @@ import {
   type AppLanguage,
 } from '../i18n'
 import {
-  createJobSearchDraft,
   MAX_JOB_ROLES,
   MAX_RESULTS_PER_ROLE,
   normalizeSearchRoles,
+  type JobSearchDraft,
 } from './job-search-state'
 
 interface JobSearchPanelProps {
   session: CareerVoiceSession
   profile: CareerProfile
   language: AppLanguage
+  draft: JobSearchDraft
+  setDraft: (
+    updater: (
+      current: JobSearchDraft,
+    ) => JobSearchDraft,
+  ) => void
   onSearchComplete: (
     result: JobSearchResponse,
   ) => void
@@ -63,15 +69,14 @@ export function JobSearchPanel({
   session,
   profile,
   language,
+  draft,
+  setDraft,
   onSearchComplete,
   onSearchInvalidated,
 }: JobSearchPanelProps) {
   const text =
     UI_TEXT[language].jobSearch
 
-  const [draft, setDraft] = useState(
-    () => createJobSearchDraft(profile),
-  )
 
   const [isSubmitting, setIsSubmitting] =
     useState(false)
