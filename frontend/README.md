@@ -1,75 +1,89 @@
-# React + TypeScript + Vite
+# CareerVoice AI Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+The React/TypeScript/Vite frontend provides email OTP sign-in, English and
+Simplified Chinese interfaces, career-profile extraction and review, job search,
+recommendations, and daily usage display. It calls the FastAPI backend for
+application authorization and workflow processing.
 
-Currently, two official plugins are available:
+See the root README for [shared architecture](../README.md#components),
+[backend setup](../README.md#local-development), and
+[security requirements](../README.md#security).
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Dependencies and tools
 
-## React Compiler
+[package.json](package.json) defines the existing dependencies and scripts:
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- React and React DOM for the UI
+- `@supabase/supabase-js` for browser authentication and sessions
+- TypeScript, Vite, and `@vitejs/plugin-react` for development and builds
+- Vitest for tests
+- ESLint with TypeScript, React Hooks, and React Refresh rules
 
-## Expanding the ESLint configuration
+The GitHub Pages workflow uses Node.js 22. Use the existing `package-lock.json`
+with npm and the checked-in tool configuration.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Public configuration and backend connection
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+Set local frontend settings in ignored `frontend/.env.local`. The public names
+are listed in [.env.example](.env.example) and read by [src/config.ts](src/config.ts):
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+| Variable | Requirement |
+| --- | --- |
+| `VITE_SUPABASE_URL` | Required for frontend authentication |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | Required for frontend authentication; publishable key only |
+| `VITE_API_BASE_URL` | API base URL; defaults to `http://127.0.0.1:8000` locally; set the intended backend URL for hosted builds |
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+These values are browser-visible and included in the frontend build. Never use
+private Supabase service-role/admin keys, database passwords, or external API
+secrets here.
 
+The FastAPI backend must be running and configured for Supabase authentication,
+application-user authorization, and the services being used. Backend CORS must
+allow the frontend origin; its local defaults cover port 5173. See the root
+[runtime configuration](../README.md#runtime-configuration) for backend variables.
+
+## Local development
+
+From `frontend/`:
+
+```bash
+npm ci
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
+Use the address printed by Vite. Start FastAPI in a separate terminal using the
+[root instructions](../README.md#fastapi-backend).
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Tests, build, and lint
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+From `frontend/`:
 
+```bash
+npm test
+npm run build
+npm run lint
 ```
+
+These run Vitest, TypeScript followed by Vite, and ESLint respectively.
+The build output is `frontend/dist`. For frontend dependency changes, also run
+`npm audit` and review lockfile changes.
+
+## GitHub Pages deployment
+
+The [deployment workflow](../.github/workflows/deploy-pages.yml) runs on pushes to
+`feat/frontend-backend-migration` and manual dispatch. It uses Node.js 22, runs
+`npm ci` and `npm run build`, and deploys `frontend/dist`. It supplies the three
+`VITE_*` variables above from GitHub Actions variables; it does not
+explicitly run tests, lint, or a security audit.
+
+[vite.config.ts](vite.config.ts) sets the build base to
+`/careervoice-ai-deployment/`. Pages serves the static frontend and requires a
+separately hosted FastAPI backend. Current hosted URLs, variable settings, and
+service availability require operator confirmation; the workflow alone does not
+prove a successful live deployment.
+
+## Interface compatibility
+
+The React interface displays profiles, jobs, and recommendations but currently
+has no result-download feature. Structured downloads remain available in the
+[legacy Streamlit interface](../README.md#legacy-streamlit-compatibility).
